@@ -164,7 +164,7 @@ export default function JoinPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="font-serif text-4xl font-bold text-primary">
-            Lunch Duel
+            Vibe Lunch
           </CardTitle>
           <CardDescription className="text-balance text-base">
             The fun way to decide where your team eats lunch
