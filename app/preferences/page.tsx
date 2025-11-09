@@ -92,8 +92,27 @@ export default function PreferencesPage() {
       },
     });
 
-    if (team?.code) {
-      router.push(`/team/${team.code}/vibe`);
+    // Determine where to redirect based on whether user is team creator
+    if (team) {
+      // Check if user is the only member (team creator)
+      const isTeamCreator = team.members.length === 1 && team.members[0] === userId;
+
+      if (isTeamCreator) {
+        // Team creator should go to admin setup
+        router.push(`/admin/setup`);
+      } else {
+        // Regular member goes to vibe page
+        router.push(`/team/${team.code}/vibe`);
+      }
+    } else {
+      // Fallback: use teamId from localStorage if team query didn't work
+      const teamId = localStorage.getItem("lunchDuel_currentTeamId");
+      if (teamId) {
+        // Assume team creator if we just came from team creation
+        router.push(`/admin/setup`);
+      } else {
+        router.push("/join");
+      }
     }
   };
 

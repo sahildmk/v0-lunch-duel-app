@@ -114,14 +114,15 @@ export default function AdminPlacesPage() {
   };
 
   const handleSave = async () => {
-    if (!teamId) return;
+    if (!teamId || !team) return;
 
     await updateTeam({
       teamId,
       restaurants,
     });
 
-    router.push("/preferences");
+    // Redirect to the team's vibe page
+    router.push(`/team/${team.code}/vibe`);
   };
 
   if (!team) return null;

@@ -75,7 +75,7 @@ export default function JoinPage() {
         return;
       }
 
-      // Create user
+      // Create user with default preferences
       const userId = await createUser({
         name: userName.trim(),
         dietaryRestrictions: [],
@@ -98,7 +98,8 @@ export default function JoinPage() {
       saveUserId(userId);
       saveTeamId(teamByCode._id);
 
-      router.push(`/team/${teamByCode.code}/preferences`);
+      // Redirect to preferences page to set up preferences first
+      router.push(`/preferences`);
     } catch (err) {
       setError(
         err instanceof Error
@@ -123,7 +124,7 @@ export default function JoinPage() {
     setError("");
 
     try {
-      // Create user first
+      // Create user first with default preferences
       const userId = await createUser({
         name: userName.trim(),
         dietaryRestrictions: [],
@@ -146,8 +147,8 @@ export default function JoinPage() {
       saveUserId(userId);
       saveTeamId(result.teamId);
 
-      // Redirect to admin setup with team code
-      router.push(`/team/${result.code}/admin/setup`);
+      // Redirect to preferences page first, then they can set up team
+      router.push(`/preferences`);
     } catch (err) {
       setError(
         err instanceof Error
