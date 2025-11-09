@@ -28,7 +28,7 @@ export default defineSchema({
   users: defineTable({
     name: v.string(),
     teamId: v.optional(v.id("teams")),
-    isAdmin: v.boolean(), // true if user is team creator/admin
+    isAdmin: v.optional(v.boolean()), // true if user is team creator/admin
     dietaryRestrictions: v.array(v.string()),
     budget: v.number(), // 1-3 scale
     maxWalkDistance: v.number(), // in minutes

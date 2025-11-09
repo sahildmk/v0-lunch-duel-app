@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, ExternalLink, MapPin, Users } from "lucide-react";
+import { Trophy, ExternalLink, MapPin, Users, Settings } from "lucide-react";
 import Confetti from "react-confetti";
 import { useWindowSize } from "@/hooks/use-window-size";
 
@@ -193,6 +193,18 @@ export default function ResultPage() {
           recycle={false}
           numberOfPieces={500}
         />
+      )}
+
+      {/* Admin Button */}
+      {user.isAdmin === true && (
+        <button
+          onClick={() => router.push("/admin/session")}
+          className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
+          title="Admin Controls"
+        >
+          <Settings className="h-4 w-4 text-orange-600" />
+          <span className="text-sm font-medium text-orange-600">Admin</span>
+        </button>
       )}
 
       <div className="max-w-3xl mx-auto space-y-6">

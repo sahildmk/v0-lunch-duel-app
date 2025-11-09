@@ -94,7 +94,7 @@ export default function PreferencesPage() {
 
     // Determine where to redirect based on whether user is admin
     if (team && user) {
-      if (user.isAdmin) {
+      if (user.isAdmin === true) {
         // Team admin goes to admin setup
         router.push(`/admin/setup`);
       } else {
@@ -104,7 +104,7 @@ export default function PreferencesPage() {
     } else {
       // Fallback: use teamId from localStorage if team query didn't work
       const teamId = localStorage.getItem("lunchDuel_currentTeamId");
-      if (teamId && user?.isAdmin) {
+      if (teamId && user?.isAdmin === true) {
         // Check if user is admin for fallback behavior
         router.push(`/admin/setup`);
       } else {

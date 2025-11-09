@@ -8,7 +8,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ExternalLink, MapPin } from "lucide-react";
+import { Clock, ExternalLink, MapPin, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
@@ -202,7 +202,19 @@ export default function VotePage() {
   const votes = (session.votes as Record<string, Record<string, number>>) || {};
 
   return (
-    <div className="min-h-screen bg-background p-4 py-8">
+    <div className="min-h-screen bg-background p-4 py-8 relative">
+      {/* Admin Button */}
+      {user.isAdmin === true && (
+        <button
+          onClick={() => router.push("/admin/session")}
+          className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
+          title="Admin Controls"
+        >
+          <Settings className="h-4 w-4 text-orange-600" />
+          <span className="text-sm font-medium text-orange-600">Admin</span>
+        </button>
+      )}
+
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Timer Header */}
         <Card className="border-primary/20 bg-primary/5">

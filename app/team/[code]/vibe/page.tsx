@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Copy, Check, Users } from "lucide-react";
+import { Copy, Check, Users, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
@@ -305,6 +305,17 @@ export default function VibePage() {
       `}</style>
 
       <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+        {user.isAdmin === true && (
+          <button
+            onClick={() => router.push("/admin/session")}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
+            title="Admin Controls"
+          >
+            <Settings className="h-4 w-4 text-orange-600" />
+            <span className="text-sm font-medium text-orange-600">Admin</span>
+          </button>
+        )}
+
         <button
           onClick={handleCopyCode}
           className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full hover:border-primary/50 transition-colors shadow-sm"

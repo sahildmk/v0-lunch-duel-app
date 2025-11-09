@@ -56,7 +56,7 @@ export default function AdminSessionPage() {
       router.push("/join");
       return;
     }
-    if (!user.isAdmin) {
+    if (user.isAdmin !== true) {
       router.push(`/team/${team.code}/vibe`);
       return;
     }
@@ -121,7 +121,7 @@ export default function AdminSessionPage() {
     });
   };
 
-  if (!user || !team || !user.isAdmin) return null;
+  if (!user || !team || user.isAdmin !== true) return null;
 
   const getPhaseColor = (phase: string) => {
     switch (phase) {
