@@ -19,12 +19,6 @@ import { Slider } from "@/components/ui/slider";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
-function getUserId(): Id<"users"> | null {
-  if (typeof window === "undefined") return null;
-  const userId = localStorage.getItem(CURRENT_USER_ID_KEY);
-  return userId as Id<"users"> | null;
-}
-
 const DIETARY_OPTIONS = [
   "Vegetarian",
   "Vegan",
@@ -40,13 +34,16 @@ const WALK_DISTANCE_OPTIONS = [5, 10, 15, 20, 25, 30];
 
 export default function PreferencesPage() {
   const router = useRouter();
-  const userId = getUserId();
+  const [userId, setUserId] = useState<Id<"users"> | null>(null);
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [budget, setBudget] = useState(2);
   const [maxWalkDistance, setMaxWalkDistance] = useState(15);
   const [rushMode, setRushMode] = useState(false);
   const [spicy, setSpicy] = useState(false);
   const [tryingNew, setTryingNew] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [savedSuccessfully, setSavedSuccessfully] = useState(false);
 
   const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
   const team = useQuery(
@@ -54,6 +51,32 @@ export default function PreferencesPage() {
     user?.teamId ? { teamId: user.teamId } : "skip"
   );
   const updateUser = useMutation(api.users.updateUser);
+
+  // Read userId from localStorage only on client side to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedUserId = localStorage.getItem(CURRENT_USER_ID_KEY);
+      setUserId(storedUserId as Id<"users"> | null);
+    }
+  }, []);
+
+  // Navigate after successful save when team is available
+  useEffect(() => {
+    if (savedSuccessfully && team?.code && userId) {
+      // Check if user is the only member (team creator)
+      const isTeamCreator = team.members.length === 1 && team.members[0] === userId;
+
+      if (isTeamCreator) {
+        // Team creator should go to admin setup
+        router.push(`/team/${team.code}/admin/setup`);
+      } else {
+        // Regular member goes to vibe page
+        router.push(`/team/${team.code}/vibe`);
+      }
+      setSavedSuccessfully(false);
+      setLoading(false);
+    }
+  }, [savedSuccessfully, team, router, userId]);
 
   useEffect(() => {
     if (user === undefined) return;
@@ -78,38 +101,57 @@ export default function PreferencesPage() {
   };
 
   const handleSave = async () => {
-    if (!userId) return;
+    if (!userId) {
+      setError("No user ID found. Please join a team first.");
+      return;
+    }
 
-    await updateUser({
-      userId,
-      dietaryRestrictions,
-      budget,
-      maxWalkDistance,
-      vibes: {
-        rushMode,
-        spicy,
-        tryingNew,
-      },
-    });
+    setLoading(true);
+    setError("");
 
-    // Determine where to redirect based on whether user is admin
-    if (team && user) {
-      if (user.isAdmin === true) {
-        // Team admin goes to admin setup
-        router.push(`/admin/setup`);
-      } else {
-        // Regular member goes to vibe page
-        router.push(`/team/${team.code}/vibe`);
+    try {
+      await updateUser({
+        userId,
+        dietaryRestrictions,
+        budget,
+        maxWalkDistance,
+        vibes: {
+          rushMode,
+          spicy,
+          tryingNew,
+        },
+      });
+
+      // Mark as saved successfully - useEffect will handle navigation when team loads
+      setSavedSuccessfully(true);
+
+      // If team is already loaded, navigate immediately
+      if (team?.code) {
+        // Check if user is the only member (team creator)
+        const isTeamCreator = team.members.length === 1 && team.members[0] === userId;
+
+        if (isTeamCreator) {
+          // Team creator should go to admin setup
+          router.push(`/team/${team.code}/admin/setup`);
+        } else {
+          // Regular member goes to vibe page
+          router.push(`/team/${team.code}/vibe`);
+        }
+        setSavedSuccessfully(false);
+        setLoading(false);
+      } else if (team === null) {
+        // Team query completed but no team found
+        setError("Team not found. Please join a team first.");
+        setLoading(false);
+        setSavedSuccessfully(false);
       }
-    } else {
-      // Fallback: use teamId from localStorage if team query didn't work
-      const teamId = localStorage.getItem("lunchDuel_currentTeamId");
-      if (teamId && user?.isAdmin === true) {
-        // Check if user is admin for fallback behavior
-        router.push(`/admin/setup`);
-      } else {
-        router.push("/join");
-      }
+      // If team is undefined (still loading), useEffect will handle navigation when it loads
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to save preferences. Please try again."
+      );
+      setLoading(false);
+      setSavedSuccessfully(false);
     }
   };
 
@@ -263,8 +305,18 @@ export default function PreferencesPage() {
               </div>
             </div>
 
-            <Button onClick={handleSave} className="w-full" size="lg">
-              Save Preferences
+            {error && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                {error}
+              </div>
+            )}
+            <Button
+              onClick={handleSave}
+              className="w-full"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Preferences"}
             </Button>
           </CardContent>
         </Card>

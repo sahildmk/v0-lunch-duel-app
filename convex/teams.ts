@@ -125,6 +125,7 @@ export const updateTeam = mutation({
           tags: v.array(v.string()),
           lastSelectedDate: v.optional(v.string()),
           dietaryOptions: v.array(v.string()),
+          pitch: v.optional(v.string()),
         })
       )
     ),
@@ -150,6 +151,93 @@ export const updateTeam = mutation({
     }
 
     await ctx.db.patch(args.teamId, updates);
+    return await ctx.db.get(args.teamId);
+  },
+});
+
+// Add a restaurant to a team
+export const addRestaurant = mutation({
+  args: {
+    teamId: v.id("teams"),
+    restaurant: v.object({
+      id: v.string(),
+      name: v.string(),
+      link: v.optional(v.string()),
+      address: v.optional(v.string()),
+      walkTime: v.number(),
+      priceLevel: v.number(),
+      tags: v.array(v.string()),
+      dietaryOptions: v.array(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Team not found");
+    }
+
+    await ctx.db.patch(args.teamId, {
+      restaurants: [...team.restaurants, args.restaurant],
+    });
+
+    return await ctx.db.get(args.teamId);
+  },
+});
+
+// Update a restaurant in a team
+export const updateRestaurant = mutation({
+  args: {
+    teamId: v.id("teams"),
+    restaurantId: v.string(),
+    restaurant: v.object({
+      id: v.string(),
+      name: v.string(),
+      link: v.optional(v.string()),
+      address: v.optional(v.string()),
+      walkTime: v.number(),
+      priceLevel: v.number(),
+      tags: v.array(v.string()),
+      dietaryOptions: v.array(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Team not found");
+    }
+
+    const updatedRestaurants = team.restaurants.map((r) =>
+      r.id === args.restaurantId ? args.restaurant : r
+    );
+
+    await ctx.db.patch(args.teamId, {
+      restaurants: updatedRestaurants,
+    });
+
+    return await ctx.db.get(args.teamId);
+  },
+});
+
+// Delete a restaurant from a team
+export const deleteRestaurant = mutation({
+  args: {
+    teamId: v.id("teams"),
+    restaurantId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Team not found");
+    }
+
+    const updatedRestaurants = team.restaurants.filter(
+      (r) => r.id !== args.restaurantId
+    );
+
+    await ctx.db.patch(args.teamId, {
+      restaurants: updatedRestaurants,
+    });
+
     return await ctx.db.get(args.teamId);
   },
 });

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, ExternalLink, Sparkles } from "lucide-react";
-import { seedShoreditchRestaurants } from "@/lib/seed-data";
+import { seedShoreditchRestaurants, seedNewShoreditchRestaurants } from "@/lib/seed-data";
 
 const CURRENT_TEAM_ID_KEY = "lunchDuel_currentTeamId";
 
@@ -73,6 +73,16 @@ export default function AdminPlacesPage() {
   const handleLoadShoreditchRestaurants = () => {
     const seededRestaurants = seedShoreditchRestaurants();
     setRestaurants(seededRestaurants);
+  };
+
+  const handleLoadNewShoreditchRestaurants = () => {
+    const seededRestaurants = seedNewShoreditchRestaurants();
+    setRestaurants(seededRestaurants);
+  };
+
+  const handleAppendNewShoreditchRestaurants = () => {
+    const seededRestaurants = seedNewShoreditchRestaurants();
+    setRestaurants([...restaurants, ...seededRestaurants]);
   };
 
   const handleAddRestaurant = () => {
@@ -140,14 +150,38 @@ export default function AdminPlacesPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {restaurants.length === 0 && (
-              <Button
-                variant="outline"
-                className="w-full bg-primary/5 border-primary/20 hover:bg-primary/10"
-                onClick={handleLoadShoreditchRestaurants}
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Load Shoreditch Restaurants (346 Old St, London)
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full bg-primary/5 border-primary/20 hover:bg-primary/10"
+                  onClick={handleLoadShoreditchRestaurants}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Load Shoreditch Restaurants (346 Old St, London)
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full bg-primary/5 border-primary/20 hover:bg-primary/10"
+                  onClick={handleLoadNewShoreditchRestaurants}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Load New Shoreditch Restaurants (16 restaurants)
+                </Button>
+              </div>
+            )}
+
+            {restaurants.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleAppendNewShoreditchRestaurants}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Add New Restaurants
+                </Button>
+              </div>
             )}
 
             {restaurants.length > 0 && (

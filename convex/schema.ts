@@ -20,6 +20,7 @@ export default defineSchema({
         tags: v.array(v.string()),
         lastSelectedDate: v.optional(v.string()),
         dietaryOptions: v.array(v.string()),
+        imageUrl: v.optional(v.string()), // URL to restaurant image
       })
     ),
     createdAt: v.number(),
@@ -55,4 +56,42 @@ export default defineSchema({
     winnerId: v.optional(v.string()),
     finalists: v.array(v.string()), // restaurant IDs
   }).index("byTeamAndDate", ["teamId", "date"]),
+
+  loyaltyCards: defineTable({
+    teamId: v.id("teams"),
+    restaurantId: v.string(), // restaurant ID from team.restaurants
+    perks: v.string(), // Description of loyalty card perks (e.g., "10% off", "Buy 1 get 1 free")
+    savings: v.optional(v.number()), // Estimated savings amount in currency
+    notes: v.optional(v.string()), // Additional notes about the card
+    createdAt: v.number(),
+  }).index("byTeamAndRestaurant", ["teamId", "restaurantId"]),
+
+  visitHistory: defineTable({
+    teamId: v.id("teams"),
+    restaurantId: v.string(), // restaurant ID from team.restaurants
+    date: v.string(), // YYYY-MM-DD format
+    sessionId: v.id("dailySessions"), // Reference to the session
+    createdAt: v.number(),
+  }).index("byTeamAndRestaurant", ["teamId", "restaurantId"]),
+
+  pitches: defineTable({
+    teamId: v.id("teams"),
+    restaurantId: v.string(), // restaurant ID from team.restaurants
+    userId: v.id("users"), // User who made the pitch
+    pitch: v.string(), // Menu item/item to pitch
+    createdAt: v.number(),
+  })
+    .index("byTeamAndRestaurant", ["teamId", "restaurantId"])
+    .index("byUserAndRestaurant", ["userId", "restaurantId"]),
+
+  discounts: defineTable({
+    teamId: v.id("teams"),
+    restaurantId: v.string(), // restaurant ID from team.restaurants
+    discount: v.string(), // Description of discount (e.g., "15% off", "Free appetizer", "Student discount")
+    amount: v.optional(v.number()), // Discount amount in currency or percentage
+    discountType: v.union(v.literal("percentage"), v.literal("fixed")), // percentage or fixed amount
+    expirationDate: v.optional(v.string()), // YYYY-MM-DD format
+    notes: v.optional(v.string()), // Additional notes about the discount
+    createdAt: v.number(),
+  }).index("byTeamAndRestaurant", ["teamId", "restaurantId"]),
 });

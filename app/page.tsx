@@ -30,8 +30,8 @@ export default function HomePage() {
   const team = useQuery(api.teams.getTeam, teamId ? { teamId } : "skip");
 
   useEffect(() => {
-    // Wait for queries to load
-    if (user === undefined || team === undefined) {
+    // If we have IDs but queries are still loading, wait
+    if ((userId && user === undefined) || (teamId && team === undefined)) {
       return;
     }
 
@@ -42,7 +42,7 @@ export default function HomePage() {
       // New user, go to join page
       router.push("/join");
     }
-  }, [user, team, router]);
+  }, [user, team, router, userId, teamId]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">

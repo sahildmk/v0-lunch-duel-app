@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, ExternalLink, MapPin, Users, Settings } from "lucide-react";
+import { Trophy, ExternalLink, MapPin, Users, CreditCard, TrendingDown, Tag, Settings } from "lucide-react";
 import Confetti from "react-confetti";
 import { useWindowSize } from "@/hooks/use-window-size";
 
@@ -47,6 +47,19 @@ export default function ResultPage() {
   );
 
   const updateSession = useMutation(api.sessions.updateSession);
+  const recordVisit = useMutation(api.visitHistory.recordVisit);
+  const loyaltyCard = useQuery(
+    api.loyaltyCards.getLoyaltyCard,
+    team?._id && session?.winnerId
+      ? { teamId: team._id, restaurantId: session.winnerId }
+      : "skip"
+  );
+  const discounts = useQuery(
+    api.discounts.getDiscounts,
+    team?._id && session?.winnerId
+      ? { teamId: team._id, restaurantId: session.winnerId }
+      : "skip"
+  );
 
   // Redirect if no user or team
   useEffect(() => {
@@ -88,6 +101,18 @@ export default function ResultPage() {
       phase: "result",
     }).catch(console.error);
   }, [session, team, updateSession]);
+
+  // Record visit when winner is determined
+  useEffect(() => {
+    if (!session || !team || !session.winnerId || session.phase !== "result") return;
+
+    recordVisit({
+      teamId: team._id,
+      restaurantId: session.winnerId,
+      date: today,
+      sessionId: session._id,
+    }).catch(console.error);
+  }, [session, team, today, recordVisit]);
 
   // Stop confetti after 5 seconds
   useEffect(() => {
@@ -299,6 +324,79 @@ export default function ResultPage() {
                 </div>
               </div>
             )}
+
+            {/* Loyalty Card Perks */}
+            {loyaltyCard && (
+              <div className="space-y-2 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  <p className="text-sm font-medium text-foreground">Loyalty Card Perks</p>
+                </div>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+                  <p className="text-sm text-foreground">{loyaltyCard.perks}</p>
+                  {loyaltyCard.savings && (
+                    <div className="flex items-center gap-2 text-primary">
+                      <TrendingDown className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        Save up to £{loyaltyCard.savings.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {loyaltyCard.notes && (
+                    <p className="text-xs text-muted-foreground">{loyaltyCard.notes}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Active Discounts */}
+            {discounts && discounts.length > 0 && (
+              <div className="space-y-2 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-5 w-5 text-green-600" />
+                  <p className="text-sm font-medium text-foreground">Active Discounts</p>
+                </div>
+                <div className="space-y-2">
+                  {discounts.map((discount) => {
+                    const discountText =
+                      discount.discountType === "percentage"
+                        ? discount.amount
+                          ? `${discount.amount}% ${discount.discount}`
+                          : discount.discount
+                        : discount.amount
+                          ? `£${discount.amount} ${discount.discount}`
+                          : discount.discount;
+
+                    return (
+                      <div
+                        key={discount._id}
+                        className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                                {discountText}
+                              </span>
+                              {discount.expirationDate && (
+                                <Badge variant="outline" className="text-xs">
+                                  Expires: {new Date(discount.expirationDate).toLocaleDateString()}
+                                </Badge>
+                              )}
+                            </div>
+                            {discount.notes && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {discount.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -337,9 +435,8 @@ export default function ResultPage() {
                       </div>
                       <div className="h-3 bg-secondary rounded-full overflow-hidden">
                         <div
-                          className={`h-full transition-all duration-500 ${
-                            isWinner ? "bg-primary" : "bg-muted-foreground/50"
-                          }`}
+                          className={`h-full transition-all duration-500 ${isWinner ? "bg-primary" : "bg-muted-foreground/50"
+                            }`}
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -351,11 +448,25 @@ export default function ResultPage() {
           </Card>
         )}
 
-        {/* Action Button */}
-        <div className="text-center pt-4">
+        {/* Action Buttons */}
+        <div className="text-center pt-4 space-y-3">
           <Button onClick={handleNewDay} size="lg" className="w-full max-w-md">
             Start Tomorrow's Duel
           </Button>
+          <div className="flex gap-2 justify-center">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/team/${teamCode}/restaurants`)}
+            >
+              View Restaurants
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/team/${teamCode}/history`)}
+            >
+              View History
+            </Button>
+          </div>
         </div>
       </div>
     </div>

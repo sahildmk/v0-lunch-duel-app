@@ -8,8 +8,9 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ExternalLink, MapPin, Settings } from "lucide-react";
+import { Clock, ExternalLink, MapPin, CreditCard, Tag, Utensils, User, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getRestaurantImage } from "@/lib/restaurant-images";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
@@ -43,6 +44,24 @@ export default function VotePage() {
   );
 
   const updateSession = useMutation(api.sessions.updateSession);
+
+  // Fetch additional data for restaurants
+  const loyaltyCards = useQuery(
+    api.loyaltyCards.getLoyaltyCards,
+    team?._id ? { teamId: team._id } : "skip"
+  );
+  const discounts = useQuery(
+    api.discounts.getTeamDiscounts,
+    team?._id ? { teamId: team._id } : "skip"
+  );
+  const pitches = useQuery(
+    api.pitches.getTeamPitches,
+    team?._id ? { teamId: team._id } : "skip"
+  );
+  const teamMembers = useQuery(
+    api.users.getUsersByIds,
+    team?.members ? { userIds: team.members } : "skip"
+  );
 
   // Redirect if no user or team
   useEffect(() => {
@@ -201,6 +220,26 @@ export default function VotePage() {
 
   const votes = (session.votes as Record<string, Record<string, number>>) || {};
 
+  // Create lookup maps
+  const loyaltyCardMap = new Map(
+    loyaltyCards?.map((card) => [card.restaurantId, card]) || []
+  );
+  const discountsMap = new Map<string, typeof discounts>();
+  discounts?.forEach((discount) => {
+    if (!discountsMap.has(discount.restaurantId)) {
+      discountsMap.set(discount.restaurantId, []);
+    }
+    discountsMap.get(discount.restaurantId)!.push(discount);
+  });
+  const pitchesMap = new Map<string, typeof pitches>();
+  pitches?.forEach((pitch) => {
+    if (!pitchesMap.has(pitch.restaurantId)) {
+      pitchesMap.set(pitch.restaurantId, []);
+    }
+    pitchesMap.get(pitch.restaurantId)!.push(pitch);
+  });
+  const userMap = new Map(teamMembers?.map((u) => [u._id, u]) || []);
+
   return (
     <div className="min-h-screen bg-background p-4 py-8 relative">
       {/* Admin Button */}
@@ -251,86 +290,201 @@ export default function VotePage() {
 
         {/* Restaurant Cards */}
         <div className="grid md:grid-cols-2 gap-6">
-          {finalists.map((restaurant) => (
-            <Card
-              key={restaurant.id}
-              className={cn(
-                "transition-all cursor-pointer hover:scale-[1.02]",
-                selectedRestaurant === restaurant.id
-                  ? "border-primary border-2 shadow-lg"
-                  : "hover:border-primary/50",
-                hasVoted && selectedRestaurant !== restaurant.id && "opacity-50"
-              )}
-              onClick={() => !hasVoted && handleVote(restaurant.id)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-2xl font-serif">
-                    {restaurant.name}
-                  </CardTitle>
-                  {restaurant.link && (
-                    <a
-                      href={restaurant.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <ExternalLink className="h-5 w-5" />
-                    </a>
+          {finalists.map((restaurant) => {
+            const loyaltyCard = loyaltyCardMap.get(restaurant.id);
+            const restaurantDiscounts = discountsMap.get(restaurant.id) || [];
+            const restaurantPitches = pitchesMap.get(restaurant.id) || [];
+
+            return (
+              <Card
+                key={restaurant.id}
+                className={cn(
+                  "transition-all cursor-pointer hover:scale-[1.02]",
+                  selectedRestaurant === restaurant.id
+                    ? "border-primary border-2 shadow-lg"
+                    : "hover:border-primary/50",
+                  hasVoted && selectedRestaurant !== restaurant.id && "opacity-50"
+                )}
+                onClick={() => !hasVoted && handleVote(restaurant.id)}
+              >
+                {/* Restaurant Image */}
+                <div className="relative w-full h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10">
+                  <img
+                    src={restaurant.imageUrl || getRestaurantImage(restaurant.name, restaurant.tags)}
+                    alt={restaurant.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(restaurant.name + " restaurant")}`;
+                    }}
+                  />
+                  {restaurantDiscounts.length > 0 && (
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {restaurantDiscounts.length} Deal{restaurantDiscounts.length > 1 ? "s" : ""}
+                      </Badge>
+                    </div>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{restaurant.walkTime} min</span>
-                  </div>
-                  <Badge variant="secondary">
-                    {"$".repeat(restaurant.priceLevel)}
-                  </Badge>
-                </div>
 
-                {restaurant.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {restaurant.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-2xl font-serif">
+                      {restaurant.name}
+                    </CardTitle>
+                    {restaurant.link && (
+                      <a
+                        href={restaurant.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <ExternalLink className="h-5 w-5" />
+                      </a>
+                    )}
                   </div>
-                )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span>{restaurant.walkTime} min</span>
+                    </div>
+                    <Badge variant="secondary">
+                      {"$".repeat(restaurant.priceLevel)}
+                    </Badge>
+                  </div>
 
-                {restaurant.dietaryOptions.length > 0 && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Dietary options:
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {restaurant.dietaryOptions.map((option) => (
-                        <Badge
-                          key={option}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {option}
+                  {/* B2B Discounts */}
+                  {restaurantDiscounts.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t">
+                      <div className="flex items-center gap-1.5">
+                        <Tag className="h-3.5 w-3.5 text-green-600" />
+                        <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                          B2B Deals
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {restaurantDiscounts.slice(0, 2).map((discount) => {
+                          const discountText =
+                            discount.discountType === "percentage"
+                              ? discount.amount
+                                ? `${discount.amount}% ${discount.discount}`
+                                : discount.discount
+                              : discount.amount
+                              ? `£${discount.amount} ${discount.discount}`
+                              : discount.discount;
+                          return (
+                            <div
+                              key={discount._id}
+                              className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded px-2 py-1"
+                            >
+                              <p className="text-xs font-medium text-green-700 dark:text-green-400">
+                                {discountText}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Personal Loyalty Card */}
+                  {loyaltyCard && (
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <CreditCard className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-medium">Personal Card</span>
+                      </div>
+                      <div className="bg-primary/5 border border-primary/20 rounded px-2 py-1">
+                        <p className="text-xs text-foreground">{loyaltyCard.perks}</p>
+                        {loyaltyCard.savings && (
+                          <p className="text-xs text-primary mt-0.5">
+                            Save £{loyaltyCard.savings.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pitches */}
+                  {restaurantPitches.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Utensils className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-medium">
+                          Team Pitches ({restaurantPitches.length})
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {restaurantPitches.slice(0, 3).map((pitch) => {
+                          const pitchUser = userMap.get(pitch.userId);
+                          return (
+                            <div
+                              key={pitch._id}
+                              className="bg-muted/50 border rounded px-2 py-1"
+                            >
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {pitchUser?.name || "Team member"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-foreground">{pitch.pitch}</p>
+                            </div>
+                          );
+                        })}
+                        {restaurantPitches.length > 3 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{restaurantPitches.length - 3} more pitch{restaurantPitches.length - 3 > 1 ? "es" : ""}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {restaurant.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {restaurant.tags.map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
                         </Badge>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {selectedRestaurant === restaurant.id && (
-                  <div className="pt-3">
-                    <Badge className="w-full justify-center py-2">
-                      Your Choice
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {restaurant.dietaryOptions.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Dietary options:
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {restaurant.dietaryOptions.map((option) => (
+                          <Badge
+                            key={option}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {option}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedRestaurant === restaurant.id && (
+                    <div className="pt-3">
+                      <Badge className="w-full justify-center py-2">
+                        Your Choice
+                      </Badge>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Action Button */}
