@@ -8,7 +8,7 @@ Lunch Duel is a team lunch voting application built with Next.js 16 and Convex. 
 
 ## Development Commands
 
-```bash
+\`\`\`bash
 # Install dependencies
 pnpm install
 
@@ -26,7 +26,7 @@ pnpm start
 
 # Lint code
 pnpm lint
-```
+\`\`\`
 
 ## Tech Stack
 
@@ -93,7 +93,7 @@ Three main tables:
 
 ### Routing Structure
 
-```
+\`\`\`
 /                          -> Entry point (redirects based on auth state)
 /join                      -> Join or create team
 /preferences               -> Set user dietary/budget preferences
@@ -102,7 +102,7 @@ Three main tables:
 /team/[code]/result        -> Daily result display
 /admin/setup               -> Team configuration (first-time setup)
 /admin/places              -> Restaurant management
-```
+\`\`\`
 
 ### Component Organization
 
@@ -138,26 +138,26 @@ When modifying Convex functions:
 ## Common Patterns
 
 **Checking user/team state:**
-```typescript
+\`\`\`typescript
 const userId = getUserId(); // from localStorage
 const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
 // Wait for loading: if (user === undefined) return;
 // Check exists: if (!user) redirect("/join");
-```
+\`\`\`
 
 **Creating/updating sessions:**
-```typescript
+\`\`\`typescript
 const today = new Date().toISOString().split("T")[0];
 const session = useQuery(api.sessions.getSession,
   team?._id ? { teamId: team._id, date: today } : "skip"
 );
-```
+\`\`\`
 
 **Dynamic routes with team code:**
-```typescript
+\`\`\`typescript
 const params = useParams();
 const teamCode = params?.code as string;
 const team = useQuery(api.teams.getTeamByCode,
   teamCode ? { code: teamCode.toUpperCase() } : "skip"
 );
-```
+\`\`\`
