@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -15,18 +15,11 @@ import { Copy, Check, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
-const CURRENT_TEAM_ID_KEY = "lunchDuel_currentTeamId";
 
 function getUserId(): Id<"users"> | null {
   if (typeof window === "undefined") return null;
   const userId = localStorage.getItem(CURRENT_USER_ID_KEY);
   return userId as Id<"users"> | null;
-}
-
-function getTeamId(): Id<"teams"> | null {
-  if (typeof window === "undefined") return null;
-  const teamId = localStorage.getItem(CURRENT_TEAM_ID_KEY);
-  return teamId as Id<"teams"> | null;
 }
 
 const VIBE_OPTIONS = [
@@ -70,8 +63,9 @@ const VIBE_OPTIONS = [
 
 export default function VibePage() {
   const router = useRouter();
+  const params = useParams();
+  const teamCode = params?.code as string;
   const userId = getUserId();
-  const teamId = getTeamId();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -79,12 +73,15 @@ export default function VibePage() {
   const isInitialLoad = useRef(true);
 
   const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
-  const team = useQuery(api.teams.getTeam, teamId ? { teamId } : "skip");
+  const team = useQuery(
+    api.teams.getTeamByCode,
+    teamCode ? { code: teamCode.toUpperCase() } : "skip"
+  );
 
   const today = new Date().toISOString().split("T")[0];
   const session = useQuery(
     api.sessions.getSession,
-    teamId ? { teamId, date: today } : "skip"
+    team?._id ? { teamId: team._id, date: today } : "skip"
   );
 
   // Get all team members for tooltip display
@@ -106,7 +103,7 @@ export default function VibePage() {
 
   // Create session if it doesn't exist
   useEffect(() => {
-    if (!teamId || session !== undefined) return;
+    if (!team?._id || session !== undefined) return;
 
     const now = new Date();
     const vibeDeadline = now.getTime() + 5 * 60 * 1000; // 5 minutes from now
@@ -114,11 +111,11 @@ export default function VibePage() {
 
     createSession({
       date: today,
-      teamId,
+      teamId: team._id,
       vibeDeadline,
       voteDeadline,
     }).catch(console.error);
-  }, [teamId, session, createSession, today]);
+  }, [team?._id, session, createSession, today]);
 
   // Initialize selected vibes from user preferences
   useEffect(() => {
@@ -192,7 +189,7 @@ export default function VibePage() {
 
   // Auto-redirect to vote when phase changes to "vote" or time expires
   useEffect(() => {
-    if (!session) return;
+    if (!session || !teamCode) return;
 
     const checkCanNavigate = () => {
       const now = new Date();
@@ -200,14 +197,14 @@ export default function VibePage() {
       const isPhaseVote = session.phase === "vote";
 
       if (isPhaseVote || isTimeExpired) {
-        router.push("/vote");
+        router.push(`/team/${teamCode}/vote`);
       }
     };
 
     checkCanNavigate();
     const interval = setInterval(checkCanNavigate, 1000);
     return () => clearInterval(interval);
-  }, [session, router]);
+  }, [session, router, teamCode]);
 
   const toggleVibe = (vibeId: string) => {
     setSelectedVibes((prev) =>
@@ -397,3 +394,4 @@ export default function VibePage() {
     </div>
   );
 }
+

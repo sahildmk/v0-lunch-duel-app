@@ -98,7 +98,7 @@ export default function JoinPage() {
       saveUserId(userId);
       saveTeamId(teamByCode._id);
 
-      router.push("/preferences");
+      router.push(`/team/${teamByCode.code}/preferences`);
     } catch (err) {
       setError(
         err instanceof Error
@@ -146,8 +146,8 @@ export default function JoinPage() {
       saveUserId(userId);
       saveTeamId(result.teamId);
 
-      // Redirect to admin setup since they created the team
-      router.push("/admin/setup");
+      // Redirect to admin setup with team code
+      router.push(`/team/${result.code}/admin/setup`);
     } catch (err) {
       setError(
         err instanceof Error

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -19,7 +19,6 @@ import Confetti from "react-confetti";
 import { useWindowSize } from "@/hooks/use-window-size";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
-const CURRENT_TEAM_ID_KEY = "lunchDuel_currentTeamId";
 
 function getUserId(): Id<"users"> | null {
   if (typeof window === "undefined") return null;
@@ -27,26 +26,24 @@ function getUserId(): Id<"users"> | null {
   return userId as Id<"users"> | null;
 }
 
-function getTeamId(): Id<"teams"> | null {
-  if (typeof window === "undefined") return null;
-  const teamId = localStorage.getItem(CURRENT_TEAM_ID_KEY);
-  return teamId as Id<"teams"> | null;
-}
-
 export default function ResultPage() {
   const router = useRouter();
+  const params = useParams();
+  const teamCode = params?.code as string;
   const userId = getUserId();
-  const teamId = getTeamId();
   const [showConfetti, setShowConfetti] = useState(true);
   const { width, height } = useWindowSize();
 
   const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
-  const team = useQuery(api.teams.getTeam, teamId ? { teamId } : "skip");
+  const team = useQuery(
+    api.teams.getTeamByCode,
+    teamCode ? { code: teamCode.toUpperCase() } : "skip"
+  );
 
   const today = new Date().toISOString().split("T")[0];
   const session = useQuery(
     api.sessions.getSession,
-    teamId ? { teamId, date: today } : "skip"
+    team?._id ? { teamId: team._id, date: today } : "skip"
   );
 
   const updateSession = useMutation(api.sessions.updateSession);
@@ -158,7 +155,7 @@ export default function ResultPage() {
 
   const handleNewDay = () => {
     // Navigate to vibe page for new day (session will be created fresh)
-    router.push("/vibe");
+    router.push(`/team/${teamCode}/vibe`);
   };
 
   if (!user || !team || !session || !winner) return null;
@@ -332,3 +329,4 @@ export default function ResultPage() {
     </div>
   );
 }
+

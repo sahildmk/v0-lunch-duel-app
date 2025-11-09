@@ -49,6 +49,10 @@ export default function PreferencesPage() {
   const [tryingNew, setTryingNew] = useState(true);
 
   const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
+  const team = useQuery(
+    api.teams.getTeam,
+    user?.teamId ? { teamId: user.teamId } : "skip"
+  );
   const updateUser = useMutation(api.users.updateUser);
 
   useEffect(() => {
@@ -88,7 +92,9 @@ export default function PreferencesPage() {
       },
     });
 
-    router.push("/vibe");
+    if (team?.code) {
+      router.push(`/team/${team.code}/vibe`);
+    }
   };
 
   if (!user) return null;

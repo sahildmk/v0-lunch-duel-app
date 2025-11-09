@@ -36,8 +36,8 @@ export default function HomePage() {
     }
 
     if (user && team) {
-      // User is already in a team, redirect to vibe page
-      router.push("/vibe");
+      // User is already in a team, redirect to vibe page with team code
+      router.push(`/team/${team.code}/vibe`);
     } else {
       // New user, go to join page
       router.push("/join");
