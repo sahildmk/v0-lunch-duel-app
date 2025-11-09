@@ -8,9 +8,14 @@
  * @module
  */
 
+import type * as discounts from "../discounts.js";
+import type * as loyaltyCards from "../loyaltyCards.js";
+import type * as pitches from "../pitches.js";
+import type * as seed from "../seed.js";
 import type * as sessions from "../sessions.js";
 import type * as teams from "../teams.js";
 import type * as users from "../users.js";
+import type * as visitHistory from "../visitHistory.js";
 
 import type {
   ApiFromModules,
@@ -27,9 +32,14 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  discounts: typeof discounts;
+  loyaltyCards: typeof loyaltyCards;
+  pitches: typeof pitches;
+  seed: typeof seed;
   sessions: typeof sessions;
   teams: typeof teams;
   users: typeof users;
+  visitHistory: typeof visitHistory;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
