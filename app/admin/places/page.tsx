@@ -1,50 +1,84 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Trash2, Plus, ExternalLink, Sparkles } from "lucide-react"
-import { getFromStorage, saveToStorage, STORAGE_KEYS, generateId, type Team, type Restaurant } from "@/lib/storage"
-import { seedShoreditchRestaurants } from "@/lib/seed-data"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Plus, ExternalLink, Sparkles } from "lucide-react";
+import { seedShoreditchRestaurants } from "@/lib/seed-data";
+
+const CURRENT_TEAM_ID_KEY = "lunchDuel_currentTeamId";
+
+function getTeamId(): Id<"teams"> | null {
+  if (typeof window === "undefined") return null;
+  const teamId = localStorage.getItem(CURRENT_TEAM_ID_KEY);
+  return teamId as Id<"teams"> | null;
+}
+
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 export default function AdminPlacesPage() {
-  const router = useRouter()
-  const [team, setTeam] = useState<Team | null>(null)
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [showAddForm, setShowAddForm] = useState(false)
+  const router = useRouter();
+  const teamId = getTeamId();
+  const [restaurants, setRestaurants] = useState<
+    Array<{
+      id: string;
+      name: string;
+      link?: string;
+      address?: string;
+      walkTime: number;
+      priceLevel: number;
+      tags: string[];
+      lastSelectedDate?: string;
+      dietaryOptions: string[];
+    }>
+  >([]);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   // Form state
-  const [name, setName] = useState("")
-  const [link, setLink] = useState("")
-  const [address, setAddress] = useState("")
-  const [walkTime, setWalkTime] = useState("10")
-  const [priceLevel, setPriceLevel] = useState(2)
-  const [tags, setTags] = useState("")
-  const [dietaryOptions, setDietaryOptions] = useState("")
+  const [name, setName] = useState("");
+  const [link, setLink] = useState("");
+  const [address, setAddress] = useState("");
+  const [walkTime, setWalkTime] = useState("10");
+  const [priceLevel, setPriceLevel] = useState(2);
+  const [tags, setTags] = useState("");
+  const [dietaryOptions, setDietaryOptions] = useState("");
+
+  const team = useQuery(api.teams.getTeam, teamId ? { teamId } : "skip");
+  const updateTeam = useMutation(api.teams.updateTeam);
 
   useEffect(() => {
-    const savedTeam = getFromStorage<Team>(STORAGE_KEYS.TEAM)
-    if (!savedTeam) {
-      router.push("/join")
-      return
+    if (team === undefined) return;
+    if (!team) {
+      router.push("/join");
+      return;
     }
-    setTeam(savedTeam)
-    setRestaurants(savedTeam.restaurants || [])
-  }, [router])
+    setRestaurants(team.restaurants || []);
+  }, [team, router]);
 
   const handleLoadShoreditchRestaurants = () => {
-    const seededRestaurants = seedShoreditchRestaurants()
-    setRestaurants(seededRestaurants)
-  }
+    const seededRestaurants = seedShoreditchRestaurants();
+    setRestaurants(seededRestaurants);
+  };
 
   const handleAddRestaurant = () => {
-    if (!name.trim()) return
+    if (!name.trim()) return;
 
-    const newRestaurant: Restaurant = {
+    const newRestaurant = {
       id: generateId(),
       name: name.trim(),
       link: link.trim() || undefined,
@@ -59,39 +93,38 @@ export default function AdminPlacesPage() {
         .split(",")
         .map((d) => d.trim())
         .filter(Boolean),
-    }
+    };
 
-    const updatedRestaurants = [...restaurants, newRestaurant]
-    setRestaurants(updatedRestaurants)
+    const updatedRestaurants = [...restaurants, newRestaurant];
+    setRestaurants(updatedRestaurants);
 
     // Reset form
-    setName("")
-    setLink("")
-    setAddress("")
-    setWalkTime("10")
-    setPriceLevel(2)
-    setTags("")
-    setDietaryOptions("")
-    setShowAddForm(false)
-  }
+    setName("");
+    setLink("");
+    setAddress("");
+    setWalkTime("10");
+    setPriceLevel(2);
+    setTags("");
+    setDietaryOptions("");
+    setShowAddForm(false);
+  };
 
   const handleDeleteRestaurant = (id: string) => {
-    setRestaurants(restaurants.filter((r) => r.id !== id))
-  }
+    setRestaurants(restaurants.filter((r) => r.id !== id));
+  };
 
-  const handleSave = () => {
-    if (!team) return
+  const handleSave = async () => {
+    if (!teamId) return;
 
-    const updatedTeam: Team = {
-      ...team,
+    await updateTeam({
+      teamId,
       restaurants,
-    }
+    });
 
-    saveToStorage(STORAGE_KEYS.TEAM, updatedTeam)
-    router.push("/preferences")
-  }
+    router.push("/preferences");
+  };
 
-  if (!team) return null
+  if (!team) return null;
 
   return (
     <div className="min-h-screen bg-background p-4 py-8">
@@ -100,7 +133,8 @@ export default function AdminPlacesPage() {
           <CardHeader>
             <CardTitle>Restaurant List</CardTitle>
             <CardDescription>
-              Add restaurants your team can choose from. Include links, walk times, and tags.
+              Add restaurants your team can choose from. Include links, walk
+              times, and tags.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -143,7 +177,11 @@ export default function AdminPlacesPage() {
                       {restaurant.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {restaurant.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-xs">
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {tag}
                             </Badge>
                           ))}
@@ -167,7 +205,12 @@ export default function AdminPlacesPage() {
               <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
                 <div className="space-y-2">
                   <Label htmlFor="name">Restaurant Name *</Label>
-                  <Input id="name" placeholder="Joe's Pizza" value={name} onChange={(e) => setName(e.target.value)} />
+                  <Input
+                    id="name"
+                    placeholder="Joe's Pizza"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -220,7 +263,9 @@ export default function AdminPlacesPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dietary">Dietary Options (comma-separated)</Label>
+                  <Label htmlFor="dietary">
+                    Dietary Options (comma-separated)
+                  </Label>
                   <Input
                     id="dietary"
                     placeholder="vegetarian, vegan, gluten-free"
@@ -233,13 +278,20 @@ export default function AdminPlacesPage() {
                   <Button onClick={handleAddRestaurant} disabled={!name.trim()}>
                     Add Restaurant
                   </Button>
-                  <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAddForm(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <Button variant="outline" className="w-full bg-transparent" onClick={() => setShowAddForm(true)}>
+              <Button
+                variant="outline"
+                className="w-full bg-transparent"
+                onClick={() => setShowAddForm(true)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Restaurant
               </Button>
@@ -254,5 +306,5 @@ export default function AdminPlacesPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

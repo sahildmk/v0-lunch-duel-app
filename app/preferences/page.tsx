@@ -1,55 +1,83 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Slider } from "@/components/ui/slider"
-import { getFromStorage, saveToStorage, STORAGE_KEYS, type User } from "@/lib/storage"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 
-const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Nut-Free", "Halal", "Kosher"]
+const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
-const BUDGET_LABELS = ["$", "$$", "$$$"]
-const WALK_DISTANCE_OPTIONS = [5, 10, 15, 20, 25, 30]
+function getUserId(): Id<"users"> | null {
+  if (typeof window === "undefined") return null;
+  const userId = localStorage.getItem(CURRENT_USER_ID_KEY);
+  return userId as Id<"users"> | null;
+}
+
+const DIETARY_OPTIONS = [
+  "Vegetarian",
+  "Vegan",
+  "Gluten-Free",
+  "Dairy-Free",
+  "Nut-Free",
+  "Halal",
+  "Kosher",
+];
+
+const BUDGET_LABELS = ["$", "$$", "$$$"];
+const WALK_DISTANCE_OPTIONS = [5, 10, 15, 20, 25, 30];
 
 export default function PreferencesPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([])
-  const [budget, setBudget] = useState(2)
-  const [maxWalkDistance, setMaxWalkDistance] = useState(15)
-  const [rushMode, setRushMode] = useState(false)
-  const [spicy, setSpicy] = useState(false)
-  const [tryingNew, setTryingNew] = useState(true)
+  const router = useRouter();
+  const userId = getUserId();
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
+  const [budget, setBudget] = useState(2);
+  const [maxWalkDistance, setMaxWalkDistance] = useState(15);
+  const [rushMode, setRushMode] = useState(false);
+  const [spicy, setSpicy] = useState(false);
+  const [tryingNew, setTryingNew] = useState(true);
+
+  const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
+  const updateUser = useMutation(api.users.updateUser);
 
   useEffect(() => {
-    const savedUser = getFromStorage<User>(STORAGE_KEYS.CURRENT_USER)
-    if (!savedUser) {
-      router.push("/join")
-      return
+    if (user === undefined) return;
+    if (!user) {
+      router.push("/join");
+      return;
     }
-    setUser(savedUser)
-    setDietaryRestrictions(savedUser.dietaryRestrictions || [])
-    setBudget(savedUser.budget || 2)
-    setMaxWalkDistance(savedUser.maxWalkDistance || 15)
-    setRushMode(savedUser.vibes?.rushMode || false)
-    setSpicy(savedUser.vibes?.spicy || false)
-    setTryingNew(savedUser.vibes?.tryingNew ?? true)
-  }, [router])
+    setDietaryRestrictions(user.dietaryRestrictions || []);
+    setBudget(user.budget || 2);
+    setMaxWalkDistance(user.maxWalkDistance || 15);
+    setRushMode(user.vibes?.rushMode || false);
+    setSpicy(user.vibes?.spicy || false);
+    setTryingNew(user.vibes?.tryingNew ?? true);
+  }, [user, router]);
 
   const toggleDietary = (option: string) => {
     setDietaryRestrictions((prev) =>
-      prev.includes(option) ? prev.filter((item) => item !== option) : [...prev, option],
-    )
-  }
+      prev.includes(option)
+        ? prev.filter((item) => item !== option)
+        : [...prev, option]
+    );
+  };
 
-  const handleSave = () => {
-    if (!user) return
+  const handleSave = async () => {
+    if (!userId) return;
 
-    const updatedUser: User = {
-      ...user,
+    await updateUser({
+      userId,
       dietaryRestrictions,
       budget,
       maxWalkDistance,
@@ -58,13 +86,12 @@ export default function PreferencesPage() {
         spicy,
         tryingNew,
       },
-    }
+    });
 
-    saveToStorage(STORAGE_KEYS.CURRENT_USER, updatedUser)
-    router.push("/vibe")
-  }
+    router.push("/vibe");
+  };
 
-  if (!user) return null
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background p-4 py-8">
@@ -73,7 +100,8 @@ export default function PreferencesPage() {
           <CardHeader>
             <CardTitle>Your Preferences</CardTitle>
             <CardDescription>
-              Set your dietary needs, budget, and default vibes to help find the perfect lunch spot
+              Set your dietary needs, budget, and default vibes to help find the
+              perfect lunch spot
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -116,14 +144,18 @@ export default function PreferencesPage() {
                   </Button>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">Your maximum price point for lunch</p>
+              <p className="text-sm text-muted-foreground">
+                Your maximum price point for lunch
+              </p>
             </div>
 
             {/* Walk Distance */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-base">Max Walk Distance</Label>
-                <span className="text-sm font-medium">{maxWalkDistance} minutes</span>
+                <span className="text-sm font-medium">
+                  {maxWalkDistance} minutes
+                </span>
               </div>
               <Slider
                 value={[maxWalkDistance]}
@@ -142,43 +174,68 @@ export default function PreferencesPage() {
             {/* Default Vibes */}
             <div className="space-y-4">
               <Label className="text-base">Default Vibes</Label>
-              <p className="text-sm text-muted-foreground">Set your typical mood (you can change these daily)</p>
+              <p className="text-sm text-muted-foreground">
+                Set your typical mood (you can change these daily)
+              </p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="space-y-0.5">
-                    <label htmlFor="rush-mode" className="text-sm font-medium cursor-pointer">
+                    <label
+                      htmlFor="rush-mode"
+                      className="text-sm font-medium cursor-pointer"
+                    >
                       Rush Mode
                     </label>
-                    <p className="text-xs text-muted-foreground">Prioritize quick service and nearby spots</p>
+                    <p className="text-xs text-muted-foreground">
+                      Prioritize quick service and nearby spots
+                    </p>
                   </div>
                   <Checkbox
                     id="rush-mode"
                     checked={rushMode}
-                    onCheckedChange={(checked) => setRushMode(checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setRushMode(checked as boolean)
+                    }
                   />
                 </div>
 
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="space-y-0.5">
-                    <label htmlFor="spicy" className="text-sm font-medium cursor-pointer">
+                    <label
+                      htmlFor="spicy"
+                      className="text-sm font-medium cursor-pointer"
+                    >
                       Spicy
                     </label>
-                    <p className="text-xs text-muted-foreground">Love some heat in your meals</p>
+                    <p className="text-xs text-muted-foreground">
+                      Love some heat in your meals
+                    </p>
                   </div>
-                  <Checkbox id="spicy" checked={spicy} onCheckedChange={(checked) => setSpicy(checked as boolean)} />
+                  <Checkbox
+                    id="spicy"
+                    checked={spicy}
+                    onCheckedChange={(checked) => setSpicy(checked as boolean)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="space-y-0.5">
-                    <label htmlFor="trying-new" className="text-sm font-medium cursor-pointer">
+                    <label
+                      htmlFor="trying-new"
+                      className="text-sm font-medium cursor-pointer"
+                    >
                       Trying New Places
                     </label>
-                    <p className="text-xs text-muted-foreground">Explore spots you haven't been to recently</p>
+                    <p className="text-xs text-muted-foreground">
+                      Explore spots you haven't been to recently
+                    </p>
                   </div>
                   <Checkbox
                     id="trying-new"
                     checked={tryingNew}
-                    onCheckedChange={(checked) => setTryingNew(checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      setTryingNew(checked as boolean)
+                    }
                   />
                 </div>
               </div>
@@ -191,5 +248,5 @@ export default function PreferencesPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

@@ -1,130 +1,182 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Trophy, ExternalLink, MapPin, Users } from "lucide-react"
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
 import {
-  getFromStorage,
-  saveToStorage,
-  removeFromStorage,
-  STORAGE_KEYS,
-  type User,
-  type Team,
-  type DailySession,
-  type Restaurant,
-} from "@/lib/storage"
-import Confetti from "react-confetti"
-import { useWindowSize } from "@/hooks/use-window-size"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, ExternalLink, MapPin, Users } from "lucide-react";
+import Confetti from "react-confetti";
+import { useWindowSize } from "@/hooks/use-window-size";
+
+const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
+const CURRENT_TEAM_ID_KEY = "lunchDuel_currentTeamId";
+
+function getUserId(): Id<"users"> | null {
+  if (typeof window === "undefined") return null;
+  const userId = localStorage.getItem(CURRENT_USER_ID_KEY);
+  return userId as Id<"users"> | null;
+}
+
+function getTeamId(): Id<"teams"> | null {
+  if (typeof window === "undefined") return null;
+  const teamId = localStorage.getItem(CURRENT_TEAM_ID_KEY);
+  return teamId as Id<"teams"> | null;
+}
 
 export default function ResultPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [team, setTeam] = useState<Team | null>(null)
-  const [session, setSession] = useState<DailySession | null>(null)
-  const [winner, setWinner] = useState<Restaurant | null>(null)
-  const [showConfetti, setShowConfetti] = useState(true)
-  const { width, height } = useWindowSize()
+  const router = useRouter();
+  const userId = getUserId();
+  const teamId = getTeamId();
+  const [showConfetti, setShowConfetti] = useState(true);
+  const { width, height } = useWindowSize();
 
+  const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
+  const team = useQuery(api.teams.getTeam, teamId ? { teamId } : "skip");
+
+  const today = new Date().toISOString().split("T")[0];
+  const session = useQuery(
+    api.sessions.getSession,
+    teamId ? { teamId, date: today } : "skip"
+  );
+
+  const updateSession = useMutation(api.sessions.updateSession);
+
+  // Redirect if no user or team
   useEffect(() => {
-    const savedUser = getFromStorage<User>(STORAGE_KEYS.CURRENT_USER)
-    const savedTeam = getFromStorage<Team>(STORAGE_KEYS.TEAM)
-    const savedSession = getFromStorage<DailySession>(STORAGE_KEYS.DAILY_SESSION)
-
-    if (!savedUser || !savedTeam || !savedSession) {
-      router.push("/join")
-      return
+    if (user === undefined || team === undefined || session === undefined)
+      return;
+    if (!user || !team || !session) {
+      router.push("/join");
     }
+  }, [user, team, session, router]);
 
-    setUser(savedUser)
-    setTeam(savedTeam)
-    setSession(savedSession)
+  // Calculate winner if not already determined
+  useEffect(() => {
+    if (!session || !team || session.winnerId) return;
 
-    // Calculate winner if not already determined
-    if (!savedSession.winnerId && savedSession.finalists.length > 0) {
-      const winnerId = calculateWinner(savedSession, savedTeam)
-      const updatedSession = {
-        ...savedSession,
-        winnerId,
-        phase: "result" as const,
-      }
-      saveToStorage(STORAGE_KEYS.DAILY_SESSION, updatedSession)
-      setSession(updatedSession)
+    const winnerId = calculateWinner(session, team);
+    updateSession({
+      sessionId: session._id,
+      winnerId,
+      phase: "result",
+    }).catch(console.error);
+  }, [session, team, updateSession]);
 
-      const winningRestaurant = savedTeam.restaurants.find((r) => r.id === winnerId)
-      setWinner(winningRestaurant || null)
-    } else if (savedSession.winnerId) {
-      const winningRestaurant = savedTeam.restaurants.find((r) => r.id === savedSession.winnerId)
-      setWinner(winningRestaurant || null)
-    }
+  // Stop confetti after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowConfetti(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
-    // Stop confetti after 5 seconds
-    const timer = setTimeout(() => setShowConfetti(false), 5000)
-    return () => clearTimeout(timer)
-  }, [router])
+  const calculateWinner = (
+    sessionData: NonNullable<typeof session>,
+    teamData: NonNullable<typeof team>
+  ): string => {
+    const finalists = sessionData.finalists
+      .map((id: string) =>
+        teamData.restaurants.find(
+          (r: NonNullable<typeof team>["restaurants"][number]) => r.id === id
+        )
+      )
+      .filter(Boolean) as NonNullable<typeof team>["restaurants"];
 
-  const calculateWinner = (session: DailySession, team: Team): string => {
-    const finalists = session.finalists
-      .map((id) => team.restaurants.find((r) => r.id === id))
-      .filter(Boolean) as Restaurant[]
-
-    if (finalists.length === 0) return team.restaurants[0]?.id || ""
+    if (finalists.length === 0) return teamData.restaurants[0]?.id || "";
 
     // Count votes for each finalist
-    const voteCounts: Record<string, number> = {}
-    finalists.forEach((f) => (voteCounts[f.id] = 0))
+    const votes =
+      (sessionData.votes as Record<string, Record<string, number>>) || {};
+    const voteCounts: Record<string, number> = {};
+    finalists.forEach(
+      (f: NonNullable<typeof team>["restaurants"][number]) =>
+        (voteCounts[f.id] = 0)
+    );
 
-    Object.values(session.votes).forEach((userVotes) => {
+    Object.values(votes).forEach((userVotes) => {
       Object.entries(userVotes).forEach(([restaurantId, score]) => {
         if (voteCounts[restaurantId] !== undefined) {
-          voteCounts[restaurantId] += score
+          voteCounts[restaurantId] += score;
         }
-      })
-    })
+      });
+    });
 
     // Find winner (highest votes)
-    let maxVotes = -1
-    let winnerId = finalists[0].id
+    let maxVotes = -1;
+    let winnerId = finalists[0].id;
 
     Object.entries(voteCounts).forEach(([id, count]) => {
       if (count > maxVotes) {
-        maxVotes = count
-        winnerId = id
+        maxVotes = count;
+        winnerId = id;
       }
-    })
+    });
 
     // If tie, use tiebreaker criteria
-    if (maxVotes === 0 || Object.values(voteCounts).filter((v) => v === maxVotes).length > 1) {
+    if (
+      maxVotes === 0 ||
+      Object.values(voteCounts).filter((v) => v === maxVotes).length > 1
+    ) {
       // Tiebreaker: prefer closer restaurants
-      const tiedRestaurants = finalists.filter((f) => voteCounts[f.id] === maxVotes)
-      tiedRestaurants.sort((a, b) => a.walkTime - b.walkTime)
-      winnerId = tiedRestaurants[0].id
+      const tiedRestaurants = finalists.filter(
+        (f: NonNullable<typeof team>["restaurants"][number]) =>
+          voteCounts[f.id] === maxVotes
+      );
+      tiedRestaurants.sort(
+        (
+          a: NonNullable<typeof team>["restaurants"][number],
+          b: NonNullable<typeof team>["restaurants"][number]
+        ) => a.walkTime - b.walkTime
+      );
+      winnerId = tiedRestaurants[0].id;
     }
 
-    return winnerId
-  }
+    return winnerId;
+  };
 
   const getVoteCount = (restaurantId: string): number => {
-    if (!session) return 0
-    return Object.values(session.votes).filter((vote) => vote[restaurantId] && vote[restaurantId] > 0).length
-  }
+    if (!session) return 0;
+    const votes =
+      (session.votes as Record<string, Record<string, number>>) || {};
+    return Object.values(votes).filter(
+      (vote) => vote[restaurantId] && vote[restaurantId] > 0
+    ).length;
+  };
+
+  const winner = useMemo(() => {
+    if (!session || !team || !session.winnerId) return null;
+    return team.restaurants.find((r) => r.id === session.winnerId) || null;
+  }, [session, team]);
 
   const handleNewDay = () => {
-    // Clear session for new day
-    removeFromStorage(STORAGE_KEYS.DAILY_SESSION)
-    router.push("/vibe")
-  }
+    // Navigate to vibe page for new day (session will be created fresh)
+    router.push("/vibe");
+  };
 
-  if (!user || !team || !session || !winner) return null
+  if (!user || !team || !session || !winner) return null;
 
-  const totalVotes = Object.keys(session.votes).length
-  const winnerVotes = getVoteCount(winner.id)
+  const votes = (session.votes as Record<string, Record<string, number>>) || {};
+  const totalVotes = Object.keys(votes).length;
+  const winnerVotes = getVoteCount(winner.id);
 
   return (
     <div className="min-h-screen bg-background p-4 py-8 relative">
-      {showConfetti && <Confetti width={width} height={height} recycle={false} numberOfPieces={500} />}
+      {showConfetti && (
+        <Confetti
+          width={width}
+          height={height}
+          recycle={false}
+          numberOfPieces={500}
+        />
+      )}
 
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Winner Announcement */}
@@ -136,8 +188,12 @@ export default function ResultPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Winner</p>
-              <h1 className="text-4xl md:text-5xl font-bold font-serif text-primary">{winner.name}</h1>
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Winner
+              </p>
+              <h1 className="text-4xl md:text-5xl font-bold font-serif text-primary">
+                {winner.name}
+              </h1>
             </div>
           </CardContent>
         </Card>
@@ -168,7 +224,9 @@ export default function ResultPage() {
                 <MapPin className="h-5 w-5" />
                 <div>
                   <p className="text-xs">Walk Time</p>
-                  <p className="font-medium text-foreground">{winner.walkTime} minutes</p>
+                  <p className="font-medium text-foreground">
+                    {winner.walkTime} minutes
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -225,22 +283,27 @@ export default function ResultPage() {
             <CardContent>
               <div className="space-y-3">
                 {session.finalists.map((finalistId) => {
-                  const restaurant = team.restaurants.find((r) => r.id === finalistId)
-                  if (!restaurant) return null
+                  const restaurant = team.restaurants.find(
+                    (r) => r.id === finalistId
+                  );
+                  if (!restaurant) return null;
 
-                  const votes = getVoteCount(finalistId)
-                  const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0
-                  const isWinner = finalistId === winner.id
+                  const voteCount = getVoteCount(finalistId);
+                  const percentage =
+                    totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+                  const isWinner = finalistId === winner.id;
 
                   return (
                     <div key={finalistId} className="space-y-1">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{restaurant.name}</span>
-                          {isWinner && <Trophy className="h-4 w-4 text-primary" />}
+                          {isWinner && (
+                            <Trophy className="h-4 w-4 text-primary" />
+                          )}
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {votes} {votes === 1 ? "vote" : "votes"}
+                          {voteCount} {voteCount === 1 ? "vote" : "votes"}
                         </span>
                       </div>
                       <div className="h-3 bg-secondary rounded-full overflow-hidden">
@@ -252,7 +315,7 @@ export default function ResultPage() {
                         />
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </CardContent>
@@ -267,5 +330,5 @@ export default function ResultPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
