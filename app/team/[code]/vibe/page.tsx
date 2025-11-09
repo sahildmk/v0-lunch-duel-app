@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Copy, Check, Users, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { shouldRedirect } from "@/lib/session-helpers";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
@@ -64,6 +65,7 @@ const VIBE_OPTIONS = [
 export default function VibePage() {
   const router = useRouter();
   const params = useParams();
+  const pathname = usePathname();
   const teamCode = params?.code as string;
   const userId = getUserId();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
@@ -207,24 +209,15 @@ export default function VibePage() {
     saveVibes().catch(console.error);
   }, [selectedVibes, session, userId, user, updateSession]);
 
-  // Auto-redirect to vote when phase changes to "vote" or time expires
+  // Phase validation - redirect if not on correct phase
   useEffect(() => {
-    if (!session || !teamCode) return;
+    if (!teamCode || session === undefined) return;
 
-    const checkCanNavigate = () => {
-      const now = new Date();
-      const isTimeExpired = now.getTime() >= session.vibeDeadline;
-      const isPhaseVote = session.phase === "vote";
-
-      if (isPhaseVote || isTimeExpired) {
-        router.push(`/team/${teamCode}/vote`);
-      }
-    };
-
-    checkCanNavigate();
-    const interval = setInterval(checkCanNavigate, 1000);
-    return () => clearInterval(interval);
-  }, [session, router, teamCode]);
+    const redirectPath = shouldRedirect(pathname, session, teamCode);
+    if (redirectPath) {
+      router.push(redirectPath);
+    }
+  }, [session, teamCode, pathname, router]);
 
   const toggleVibe = (vibeId: string) => {
     setSelectedVibes((prev) =>

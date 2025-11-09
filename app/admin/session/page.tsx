@@ -48,6 +48,7 @@ export default function AdminSessionPage() {
 
   const updateSession = useMutation(api.sessions.updateSession);
   const createSession = useMutation(api.sessions.createSession);
+  const generateFinalists = useMutation(api.sessions.generateFinalists);
 
   // Redirect if not admin
   useEffect(() => {
@@ -93,11 +94,23 @@ export default function AdminSessionPage() {
   }, [session]);
 
   const handleAdvanceToVote = async () => {
-    if (!session) return;
-    await updateSession({
-      sessionId: session._id,
-      phase: "vote",
-    });
+    if (!session || !team) return;
+
+    // Generate finalists before advancing to vote phase
+    try {
+      await generateFinalists({
+        sessionId: session._id,
+        teamId: team._id,
+      });
+
+      // Then advance to vote phase
+      await updateSession({
+        sessionId: session._id,
+        phase: "vote",
+      });
+    } catch (error) {
+      console.error("Error advancing to vote phase:", error);
+    }
   };
 
   const handleRevealResults = async () => {

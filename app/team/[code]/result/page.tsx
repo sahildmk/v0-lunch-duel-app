@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, ExternalLink, MapPin, Users, CreditCard, TrendingDown, Tag, Settings } from "lucide-react";
 import Confetti from "react-confetti";
 import { useWindowSize } from "@/hooks/use-window-size";
+import { shouldRedirect } from "@/lib/session-helpers";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
@@ -29,6 +30,7 @@ function getUserId(): Id<"users"> | null {
 export default function ResultPage() {
   const router = useRouter();
   const params = useParams();
+  const pathname = usePathname();
   const teamCode = params?.code as string;
   const userId = getUserId();
   const [showConfetti, setShowConfetti] = useState(true);
@@ -70,6 +72,16 @@ export default function ResultPage() {
     }
   }, [user, team, session, router]);
 
+  // Phase validation - redirect if not on result phase
+  useEffect(() => {
+    if (!teamCode || session === undefined) return;
+
+    const redirectPath = shouldRedirect(pathname, session, teamCode);
+    if (redirectPath) {
+      router.push(redirectPath);
+    }
+  }, [session, teamCode, pathname, router]);
+
   // Show error if team not found (after loading)
   if (user !== undefined && team === null) {
     return (
@@ -90,15 +102,17 @@ export default function ResultPage() {
     );
   }
 
-  // Calculate winner if not already determined
+  // Calculate winner if not already determined (only if in result phase)
   useEffect(() => {
     if (!session || !team || session.winnerId) return;
+
+    // Only calculate winner if session is in result phase
+    if (session.phase !== "result") return;
 
     const winnerId = calculateWinner(session, team);
     updateSession({
       sessionId: session._id,
       winnerId,
-      phase: "result",
     }).catch(console.error);
   }, [session, team, updateSession]);
 
@@ -202,6 +216,9 @@ export default function ResultPage() {
     // Navigate to vibe page for new day (session will be created fresh)
     router.push(`/team/${teamCode}/vibe`);
   };
+
+  // Check if we can start tomorrow's duel (only if it's a different day)
+  const isSameDay = session ? session.date === today : true;
 
   if (!user || !team || !session || !winner) return null;
 
@@ -450,8 +467,13 @@ export default function ResultPage() {
 
         {/* Action Buttons */}
         <div className="text-center pt-4 space-y-3">
-          <Button onClick={handleNewDay} size="lg" className="w-full max-w-md">
-            Start Tomorrow's Duel
+          <Button
+            onClick={handleNewDay}
+            size="lg"
+            className="w-full max-w-md"
+            disabled={isSameDay}
+          >
+            {isSameDay ? "Available Tomorrow" : "Start Tomorrow's Duel"}
           </Button>
           <div className="flex gap-2 justify-center">
             <Button

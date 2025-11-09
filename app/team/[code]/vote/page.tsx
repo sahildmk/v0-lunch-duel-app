@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ExternalLink, MapPin, CreditCard, Tag, Utensils, User, Settings } from "lucide-react";
+import { Copy, Check, ExternalLink, MapPin, CreditCard, Tag, Utensils, User, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getRestaurantImage } from "@/lib/restaurant-images";
+import { shouldRedirect } from "@/lib/session-helpers";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
@@ -23,6 +24,7 @@ function getUserId(): Id<"users"> | null {
 export default function VotePage() {
   const router = useRouter();
   const params = useParams();
+  const pathname = usePathname();
   const teamCode = params?.code as string;
   const userId = getUserId();
   const [selectedRestaurant, setSelectedRestaurant] = useState<string | null>(
@@ -30,6 +32,7 @@ export default function VotePage() {
   );
   const [hasVoted, setHasVoted] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
   const team = useQuery(
@@ -92,27 +95,17 @@ export default function VotePage() {
     );
   }
 
-  // Redirect back to vibe if phase is still "vibe" and time hasn't expired
+  // Phase validation - redirect if not on correct phase
   useEffect(() => {
-    if (!session || !teamCode) return;
+    if (!teamCode || session === undefined) return;
 
-    const checkShouldRedirect = () => {
-      const now = new Date();
-      const isTimeExpired = now.getTime() >= session.vibeDeadline;
-      const isPhaseVote = session.phase === "vote";
+    const redirectPath = shouldRedirect(pathname, session, teamCode);
+    if (redirectPath) {
+      router.push(redirectPath);
+    }
+  }, [session, teamCode, pathname, router]);
 
-      // If phase is still "vibe" and time hasn't expired, redirect back to vibe
-      if (!isPhaseVote && !isTimeExpired) {
-        router.push(`/team/${teamCode}/vibe`);
-      }
-    };
-
-    checkShouldRedirect();
-    const interval = setInterval(checkShouldRedirect, 1000);
-    return () => clearInterval(interval);
-  }, [session, router, teamCode]);
-
-  // Check if user already voted and set finalists
+  // Check if user already voted
   useEffect(() => {
     if (!session || !userId) return;
 
@@ -125,17 +118,8 @@ export default function VotePage() {
       if (votedId) setSelectedRestaurant(votedId);
     }
 
-    // Generate finalists if not set
-    if (session.finalists.length === 0 && team && user) {
-      const selected = selectFinalists(team, user);
-      updateSession({
-        sessionId: session._id,
-        finalists: selected.map(
-          (r: NonNullable<typeof team>["restaurants"][number]) => r.id
-        ),
-      }).catch(console.error);
-    }
-  }, [session, userId, team, user, updateSession]);
+    // Note: Finalists are now generated server-side when admin advances to vote phase
+  }, [session, userId]);
 
   // Timer
   useEffect(() => {
@@ -194,7 +178,7 @@ export default function VotePage() {
   }, [session, team]);
 
   const handleVote = async (restaurantId: string) => {
-    if (!user || !session || !userId || hasVoted) return;
+    if (!user || !session || !userId) return;
 
     setSelectedRestaurant(restaurantId);
     setHasVoted(true);
@@ -212,8 +196,11 @@ export default function VotePage() {
     });
   };
 
-  const handleViewResults = () => {
-    router.push(`/team/${teamCode}/result`);
+  const handleCopyCode = () => {
+    if (!team) return;
+    navigator.clipboard.writeText(team.code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (!user || !team || !session || finalists.length < 2) return null;
@@ -241,43 +228,45 @@ export default function VotePage() {
   const userMap = new Map(teamMembers?.map((u) => [u._id, u]) || []);
 
   return (
-    <div className="min-h-screen bg-background p-4 py-8 relative">
-      {/* Admin Button */}
-      {user.isAdmin === true && (
+    <div className="min-h-screen bg-background p-8 relative overflow-hidden">
+      {/* Top Right Controls */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+        {user.isAdmin === true && (
+          <button
+            onClick={() => router.push("/admin/session")}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
+            title="Admin Controls"
+          >
+            <Settings className="h-4 w-4 text-orange-600" />
+            <span className="text-sm font-medium text-orange-600">Admin</span>
+          </button>
+        )}
+
         <button
-          onClick={() => router.push("/admin/session")}
-          className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
-          title="Admin Controls"
+          onClick={handleCopyCode}
+          className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full hover:border-primary/50 transition-colors shadow-sm"
         >
-          <Settings className="h-4 w-4 text-orange-600" />
-          <span className="text-sm font-medium text-orange-600">Admin</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            Team
+          </span>
+          <span className="text-lg font-bold font-mono tracking-wider">
+            {team.code}
+          </span>
+          {copied ? (
+            <Check className="h-4 w-4 text-primary" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
         </button>
-      )}
 
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Timer Header */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Voting Phase</p>
-                  <p className="text-xs text-muted-foreground">
-                    Choose your favorite
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold font-serif text-primary">
-                  {timeRemaining}
-                </p>
-                <p className="text-xs text-muted-foreground">until results</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="px-4 py-2 bg-primary/10 border border-primary/20 rounded-full shadow-sm">
+          <span className="text-lg font-bold text-primary">
+            {timeRemaining}
+          </span>
+        </div>
+      </div>
 
+      <div className="max-w-4xl mx-auto space-y-6 mt-12">
         {/* Voting Title */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold font-serif">The Duel</h1>
@@ -305,7 +294,7 @@ export default function VotePage() {
                     : "hover:border-primary/50",
                   hasVoted && selectedRestaurant !== restaurant.id && "opacity-50"
                 )}
-                onClick={() => !hasVoted && handleVote(restaurant.id)}
+                onClick={() => handleVote(restaurant.id)}
               >
                 {/* Restaurant Image */}
                 <div className="relative w-full h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10">
@@ -487,19 +476,6 @@ export default function VotePage() {
           })}
         </div>
 
-        {/* Action Button */}
-        {hasVoted && (
-          <div className="text-center">
-            <Button
-              onClick={handleViewResults}
-              size="lg"
-              className="w-full max-w-md"
-            >
-              View Current Results
-            </Button>
-          </div>
-        )}
-
         {/* Vote Meter */}
         {hasVoted && votes && (
           <Card>
@@ -537,6 +513,25 @@ export default function VotePage() {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      {/* Bottom Status Message */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+        <div className="text-center">
+          {hasVoted ? (
+            <div className="px-6 py-3 bg-primary/20 border border-primary/30 rounded-full backdrop-blur-xl shadow-lg">
+              <p className="text-sm font-medium text-primary">
+                Vote saved! Waiting for admin to reveal results...
+              </p>
+            </div>
+          ) : (
+            <div className="px-6 py-3 bg-background/60 border border-border rounded-full backdrop-blur-xl shadow-lg">
+              <p className="text-sm font-medium text-muted-foreground">
+                Select your favorite restaurant
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
