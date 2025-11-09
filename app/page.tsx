@@ -40,7 +40,7 @@ export default function HomePage() {
           <div className="inline-block p-4 bg-primary/10 rounded-full">
             <Utensils className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="font-serif text-5xl font-bold text-foreground">
+          <h1 className="text-5xl font-bold text-foreground">
             Vibe Lunch
           </h1>
           <p className="text-lg text-muted-foreground max-w-md mx-auto">

@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Utensils, History, Home, Users } from "lucide-react";
+import { LogOut, Utensils, History, Home, Users, Copy, Check, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
@@ -21,9 +21,13 @@ function getUserId(): Id<"users"> | null {
 interface TeamNavProps {
     teamCode: string;
     userId: Id<"users"> | null;
+    timeRemaining?: string;
+    onCopyCode?: () => void;
+    copied?: boolean;
+    isAdmin?: boolean;
 }
 
-export function TeamNav({ teamCode, userId }: TeamNavProps) {
+export function TeamNav({ teamCode, userId, timeRemaining, onCopyCode, copied, isAdmin }: TeamNavProps) {
     const router = useRouter();
     const pathname = usePathname();
 
@@ -96,6 +100,41 @@ export function TeamNav({ teamCode, userId }: TeamNavProps) {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        {isAdmin && (
+                            <button
+                                onClick={() => router.push("/admin/session")}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors text-xs"
+                                title="Admin Controls"
+                            >
+                                <Settings className="h-3.5 w-3.5 text-orange-600" />
+                                <span className="font-medium text-orange-600 hidden sm:inline">Admin</span>
+                            </button>
+                        )}
+                        {onCopyCode && (
+                            <button
+                                onClick={onCopyCode}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-full hover:border-primary/50 transition-colors text-xs"
+                            >
+                                <span className="font-medium text-muted-foreground hidden sm:inline">
+                                    Team
+                                </span>
+                                <span className="font-bold font-mono tracking-wider">
+                                    {teamCode.toUpperCase()}
+                                </span>
+                                {copied ? (
+                                    <Check className="h-3.5 w-3.5 text-primary" />
+                                ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                )}
+                            </button>
+                        )}
+                        {timeRemaining && (
+                            <div className="px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+                                <span className="font-bold text-primary text-sm">
+                                    {timeRemaining}
+                                </span>
+                            </div>
+                        )}
                         {user && (
                             <span className="text-sm text-muted-foreground hidden sm:inline">
                                 {user.name}

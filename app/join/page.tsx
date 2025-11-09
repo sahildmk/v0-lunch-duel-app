@@ -163,7 +163,7 @@ export default function JoinPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="font-serif text-4xl font-bold text-primary">
+          <CardTitle className="text-4xl font-bold text-primary">
             Vibe Lunch
           </CardTitle>
           <CardDescription className="text-balance text-base">

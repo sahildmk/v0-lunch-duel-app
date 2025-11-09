@@ -266,7 +266,7 @@ export default function ResultPage() {
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   Winner
                 </p>
-                <h1 className="text-4xl md:text-5xl font-bold font-serif text-primary">
+                <h1 className="text-4xl md:text-5xl font-bold text-primary">
                   {winner.name}
                 </h1>
               </div>

@@ -97,7 +97,7 @@ export default function TeamPage() {
                 <div className="max-w-4xl mx-auto space-y-6">
                     {/* Header */}
                     <div>
-                        <h1 className="text-3xl font-bold font-serif">{team.name}</h1>
+                        <h1 className="text-3xl font-bold">{team.name}</h1>
                         <p className="text-muted-foreground mt-1">Team Overview</p>
                     </div>
 

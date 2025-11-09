@@ -89,7 +89,7 @@ export default function HistoryPage() {
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div>
-                                <h1 className="text-3xl font-bold font-serif">Visit History</h1>
+                                <h1 className="text-3xl font-bold">Visit History</h1>
                                 <p className="text-muted-foreground mt-1">
                                     Track how often your team visits each restaurant
                                 </p>

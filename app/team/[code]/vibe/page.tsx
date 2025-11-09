@@ -25,41 +25,130 @@ function getUserId(): Id<"users"> | null {
 }
 
 const VIBE_OPTIONS = [
+  // Row 1
   {
     id: "rush",
     label: "Rush Mode",
-    position: { top: "25%", left: "25%" },
+    position: { top: "8%", left: "15%" },
     delay: "0s",
   },
   {
     id: "spicy",
     label: "Spicy",
-    position: { top: "20%", left: "50%" },
+    position: { top: "5%", left: "35%" },
     delay: "1s",
   },
   {
     id: "tryingNew",
     label: "Trying New",
-    position: { top: "28%", right: "22%" },
+    position: { top: "10%", left: "55%" },
     delay: "2s",
   },
   {
+    id: "fancy",
+    label: "Fancy",
+    position: { top: "7%", right: "12%" },
+    delay: "1.5s",
+  },
+  // Row 2
+  {
     id: "healthy",
     label: "Healthy",
-    position: { top: "50%", left: "20%" },
+    position: { top: "25%", left: "12%" },
     delay: "0.5s",
   },
   {
     id: "comfort",
     label: "Comfort Food",
-    position: { top: "55%", left: "48%" },
-    delay: "1.5s",
+    position: { top: "28%", left: "33%" },
+    delay: "2.5s",
   },
   {
-    id: "fancy",
-    label: "Fancy",
-    position: { top: "48%", right: "25%" },
-    delay: "2.5s",
+    id: "vegetarian",
+    label: "Vegetarian",
+    position: { top: "23%", left: "55%" },
+    delay: "1.8s",
+  },
+  {
+    id: "fresh",
+    label: "Fresh & Light",
+    position: { top: "26%", right: "10%" },
+    delay: "0.3s",
+  },
+  // Row 3
+  {
+    id: "budget",
+    label: "Budget Friendly",
+    position: { top: "43%", left: "10%" },
+    delay: "0.8s",
+  },
+  {
+    id: "quick",
+    label: "Quick Service",
+    position: { top: "45%", left: "32%" },
+    delay: "2.2s",
+  },
+  {
+    id: "social",
+    label: "Social Vibe",
+    position: { top: "42%", left: "54%" },
+    delay: "1.2s",
+  },
+  {
+    id: "casual",
+    label: "Casual",
+    position: { top: "46%", right: "8%" },
+    delay: "2.8s",
+  },
+  // Row 4
+  {
+    id: "adventurous",
+    label: "Adventurous",
+    position: { top: "60%", left: "14%" },
+    delay: "1.4s",
+  },
+  {
+    id: "ethnic",
+    label: "Ethnic Cuisine",
+    position: { top: "63%", left: "35%" },
+    delay: "0.7s",
+  },
+  {
+    id: "indulgent",
+    label: "Indulgent",
+    position: { top: "58%", left: "56%" },
+    delay: "2.1s",
+  },
+  {
+    id: "local",
+    label: "Local Spot",
+    position: { top: "62%", right: "11%" },
+    delay: "1.9s",
+  },
+  // Row 5
+  {
+    id: "quiet",
+    label: "Quiet Place",
+    position: { top: "78%", left: "12%" },
+    delay: "0.4s",
+  },
+  {
+    id: "filling",
+    label: "Big Portions",
+    position: { top: "75%", left: "34%" },
+    delay: "2.6s",
+  },
+  {
+    id: "takeaway",
+    label: "Takeaway",
+    position: { top: "80%", left: "55%" },
+    delay: "1.1s",
+  },
+  {
+    id: "trendy",
+    label: "Trendy",
+    position: { top: "77%", right: "9%" },
+    delay: "1.7s",
   },
 ];
 
@@ -292,8 +381,55 @@ export default function VibePage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      <TeamNav teamCode={teamCode} userId={userId} />
-      <div className="p-8">
+      {/* Animated Background Emojis */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-10">
+        <style jsx>{`
+          @keyframes drift {
+            0% {
+              transform: translate(0, 0) rotate(0deg);
+            }
+            50% {
+              transform: translate(30px, -40px) rotate(180deg);
+            }
+            100% {
+              transform: translate(0, 0) rotate(360deg);
+            }
+          }
+          @keyframes float-slow {
+            0%, 100% {
+              transform: translateY(0px) translateX(0px);
+            }
+            50% {
+              transform: translateY(-30px) translateX(20px);
+            }
+          }
+        `}</style>
+        <div className="text-6xl absolute top-10 left-20 animate-[drift_20s_ease-in-out_infinite]">🍕</div>
+        <div className="text-7xl absolute top-32 right-24 animate-[drift_25s_ease-in-out_infinite_2s]">🍔</div>
+        <div className="text-5xl absolute top-48 left-32 animate-[float-slow_15s_ease-in-out_infinite_1s]">🥗</div>
+        <div className="text-6xl absolute top-64 right-40 animate-[drift_22s_ease-in-out_infinite_3s]">🍜</div>
+        <div className="text-7xl absolute top-80 left-16 animate-[float-slow_18s_ease-in-out_infinite_4s]">🌮</div>
+        <div className="text-5xl absolute bottom-32 right-28 animate-[drift_24s_ease-in-out_infinite_1.5s]">🍱</div>
+        <div className="text-6xl absolute bottom-48 left-24 animate-[float-slow_20s_ease-in-out_infinite_2.5s]">🍛</div>
+        <div className="text-7xl absolute bottom-64 right-16 animate-[drift_19s_ease-in-out_infinite_3.5s]">🥙</div>
+        <div className="text-5xl absolute top-40 left-[60%] animate-[float-slow_23s_ease-in-out_infinite]">🍝</div>
+        <div className="text-6xl absolute bottom-40 left-[55%] animate-[drift_21s_ease-in-out_infinite_2s]">🍣</div>
+        <div className="text-7xl absolute top-56 right-[15%] animate-[float-slow_17s_ease-in-out_infinite_1.8s]">🥘</div>
+        <div className="text-5xl absolute bottom-56 right-[30%] animate-[drift_26s_ease-in-out_infinite_2.8s]">🌯</div>
+        <div className="text-6xl absolute top-[30%] left-[10%] animate-[float-slow_16s_ease-in-out_infinite_3.2s]">🍲</div>
+        <div className="text-7xl absolute bottom-[25%] right-[8%] animate-[drift_27s_ease-in-out_infinite_1.2s]">🥟</div>
+        <div className="text-5xl absolute top-[70%] left-[40%] animate-[float-slow_19s_ease-in-out_infinite_2.2s]">🍤</div>
+      </div>
+
+      <TeamNav
+        teamCode={teamCode}
+        userId={userId}
+        timeRemaining={timeRemaining}
+        onCopyCode={handleCopyCode}
+        copied={copied}
+        isAdmin={user.isAdmin === true}
+      />
+      <div className="p-8 relative z-10">
         <style jsx>{`
         @keyframes float {
           0%,
@@ -301,46 +437,10 @@ export default function VibePage() {
             transform: translateY(0px);
           }
           50% {
-            transform: translateY(-6px);
+            transform: translateY(-20px);
           }
         }
       `}</style>
-
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
-          {user.isAdmin === true && (
-            <button
-              onClick={() => router.push("/admin/session")}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
-              title="Admin Controls"
-            >
-              <Settings className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-medium text-orange-600">Admin</span>
-            </button>
-          )}
-
-          <button
-            onClick={handleCopyCode}
-            className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full hover:border-primary/50 transition-colors shadow-sm"
-          >
-            <span className="text-sm font-medium text-muted-foreground">
-              Team
-            </span>
-            <span className="text-lg font-bold font-mono tracking-wider">
-              {team.code}
-            </span>
-            {copied ? (
-              <Check className="h-4 w-4 text-primary" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </button>
-
-          <div className="px-4 py-2 bg-primary/10 border border-primary/20 rounded-full shadow-sm">
-            <span className="text-lg font-bold text-primary">
-              {timeRemaining}
-            </span>
-          </div>
-        </div>
 
         <TooltipProvider delayDuration={200}>
           <div className="relative w-full h-[calc(100vh-200px)] mt-12">

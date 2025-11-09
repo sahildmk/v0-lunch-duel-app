@@ -263,7 +263,7 @@ export default function VotePage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold font-serif text-primary">
+                  <p className="text-2xl font-bold text-primary">
                     {timeRemaining}
                   </p>
                   <p className="text-xs text-muted-foreground">until results</p>
@@ -274,7 +274,7 @@ export default function VotePage() {
 
           {/* Voting Title */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold font-serif">The Duel</h1>
+            <h1 className="text-3xl font-bold">The Duel</h1>
             <p className="text-muted-foreground">
               {hasVoted
                 ? "Your vote has been recorded!"
@@ -324,7 +324,7 @@ export default function VotePage() {
 
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-2xl font-serif">
+                      <CardTitle className="text-2xl">
                         {restaurant.name}
                       </CardTitle>
                       {restaurant.link && (
