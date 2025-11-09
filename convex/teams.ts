@@ -45,9 +45,10 @@ export const createTeam = mutation({
       createdAt: Date.now(),
     });
 
-    // Update user's teamId to maintain bidirectional relationship
+    // Update user's teamId and isAdmin to maintain bidirectional relationship
     await ctx.db.patch(args.userId, {
       teamId: teamId,
+      isAdmin: true, // Team creator is admin
     });
 
     return { teamId, code };

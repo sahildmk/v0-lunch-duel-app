@@ -11,6 +11,7 @@ export const createUser = mutation({
   args: {
     name: v.string(),
     teamId: v.optional(v.id("teams")),
+    isAdmin: v.optional(v.boolean()),
     dietaryRestrictions: v.optional(v.array(v.string())),
     budget: v.optional(v.number()),
     maxWalkDistance: v.optional(v.number()),
@@ -26,6 +27,7 @@ export const createUser = mutation({
     const userId = await ctx.db.insert("users", {
       name: args.name,
       teamId: args.teamId,
+      isAdmin: args.isAdmin ?? false,
       dietaryRestrictions: args.dietaryRestrictions || [],
       budget: args.budget ?? 2,
       maxWalkDistance: args.maxWalkDistance ?? 15,

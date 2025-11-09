@@ -298,10 +298,24 @@ export default function AdminPlacesPage() {
               </Button>
             )}
 
-            {restaurants.length > 0 && (
+            {restaurants.length >= 2 ? (
               <Button onClick={handleSave} className="w-full" size="lg">
-                Continue to Preferences
+                Continue to Vibe Selection
               </Button>
+            ) : (
+              <div className="space-y-2">
+                <Button
+                  disabled
+                  className="w-full"
+                  size="lg"
+                  title="Add at least 2 restaurants to continue"
+                >
+                  Continue to Vibe Selection
+                </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  Add at least 2 restaurants to continue
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

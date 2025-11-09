@@ -48,10 +48,30 @@ export default function VotePage() {
   useEffect(() => {
     if (user === undefined || team === undefined || session === undefined)
       return;
-    if (!user || !team || !session) {
+    if (!user) {
       router.push("/join");
     }
   }, [user, team, session, router]);
+
+  // Show error if team not found (after loading)
+  if (user !== undefined && team === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold text-foreground">Team Not Found</h1>
+          <p className="text-muted-foreground">
+            The team code "{teamCode}" doesn't exist.
+          </p>
+          <button
+            onClick={() => router.push("/join")}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Back to Join
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect back to vibe if phase is still "vibe" and time hasn't expired
   useEffect(() => {
