@@ -18,6 +18,8 @@ import { Trophy, ExternalLink, MapPin, Users, CreditCard, TrendingDown, Tag, Set
 import Confetti from "react-confetti";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { shouldRedirect } from "@/lib/session-helpers";
+import { getRestaurantImage } from "@/lib/restaurant-images";
+import { TeamNav } from "@/components/team-nav";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
@@ -227,267 +229,270 @@ export default function ResultPage() {
   const winnerVotes = getVoteCount(winner.id);
 
   return (
-    <div className="min-h-screen bg-background p-4 py-8 relative">
-      {showConfetti && (
-        <Confetti
-          width={width}
-          height={height}
-          recycle={false}
-          numberOfPieces={500}
-        />
-      )}
+    <div className="min-h-screen bg-background">
+      <TeamNav teamCode={teamCode} userId={userId} />
+      <div className="p-4 py-8 relative">
+        {showConfetti && (
+          <Confetti
+            width={width}
+            height={height}
+            recycle={false}
+            numberOfPieces={500}
+          />
+        )}
 
-      {/* Admin Button */}
-      {user.isAdmin === true && (
-        <button
-          onClick={() => router.push("/admin/session")}
-          className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
-          title="Admin Controls"
-        >
-          <Settings className="h-4 w-4 text-orange-600" />
-          <span className="text-sm font-medium text-orange-600">Admin</span>
-        </button>
-      )}
+        {/* Admin Button */}
+        {user.isAdmin === true && (
+          <button
+            onClick={() => router.push("/admin/session")}
+            className="fixed top-24 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
+            title="Admin Controls"
+          >
+            <Settings className="h-4 w-4 text-orange-600" />
+            <span className="text-sm font-medium text-orange-600">Admin</span>
+          </button>
+        )}
 
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Winner Announcement */}
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="bg-primary/20 p-4 rounded-full">
-                <Trophy className="h-12 w-12 text-primary" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Winner
-              </p>
-              <h1 className="text-4xl md:text-5xl font-bold font-serif text-primary">
-                {winner.name}
-              </h1>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Winner Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Lunch Details</span>
-              {winner.link && (
-                <a
-                  href={winner.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:text-primary/80"
-                >
-                  <Button variant="outline" size="sm">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View on Map
-                  </Button>
-                </a>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-5 w-5" />
-                <div>
-                  <p className="text-xs">Walk Time</p>
-                  <p className="font-medium text-foreground">
-                    {winner.walkTime} minutes
-                  </p>
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Winner Announcement */}
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardContent className="pt-8 pb-8 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="bg-primary/20 p-4 rounded-full">
+                  <Trophy className="h-12 w-12 text-primary" />
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-5 w-5" />
-                <div>
-                  <p className="text-xs">Team Votes</p>
-                  <p className="font-medium text-foreground">
-                    {winnerVotes} / {totalVotes}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Price:</span>
-              <Badge variant="secondary">{"$".repeat(winner.priceLevel)}</Badge>
-            </div>
-
-            {winner.tags.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Tags</p>
-                <div className="flex flex-wrap gap-2">
-                  {winner.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Winner
+                </p>
+                <h1 className="text-4xl md:text-5xl font-bold font-serif text-primary">
+                  {winner.name}
+                </h1>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Winner Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Lunch Details</span>
+                {winner.link && (
+                  <a
+                    href={winner.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary/80"
+                  >
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View on Map
+                    </Button>
+                  </a>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-5 w-5" />
+                  <div>
+                    <p className="text-xs">Walk Time</p>
+                    <p className="font-medium text-foreground">
+                      {winner.walkTime} minutes
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Users className="h-5 w-5" />
+                  <div>
+                    <p className="text-xs">Team Votes</p>
+                    <p className="font-medium text-foreground">
+                      {winnerVotes} / {totalVotes}
+                    </p>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {winner.dietaryOptions.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Dietary Options</p>
-                <div className="flex flex-wrap gap-2">
-                  {winner.dietaryOptions.map((option) => (
-                    <Badge key={option} variant="secondary">
-                      {option}
-                    </Badge>
-                  ))}
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Price:</span>
+                <Badge variant="secondary">{"$".repeat(winner.priceLevel)}</Badge>
               </div>
-            )}
 
-            {/* Loyalty Card Perks */}
-            {loyaltyCard && (
-              <div className="space-y-2 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <p className="text-sm font-medium text-foreground">Loyalty Card Perks</p>
-                </div>
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
-                  <p className="text-sm text-foreground">{loyaltyCard.perks}</p>
-                  {loyaltyCard.savings && (
-                    <div className="flex items-center gap-2 text-primary">
-                      <TrendingDown className="h-4 w-4" />
-                      <span className="text-sm font-medium">
-                        Save up to £{loyaltyCard.savings.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-                  {loyaltyCard.notes && (
-                    <p className="text-xs text-muted-foreground">{loyaltyCard.notes}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Active Discounts */}
-            {discounts && discounts.length > 0 && (
-              <div className="space-y-2 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <Tag className="h-5 w-5 text-green-600" />
-                  <p className="text-sm font-medium text-foreground">Active Discounts</p>
-                </div>
+              {winner.tags.length > 0 && (
                 <div className="space-y-2">
-                  {discounts.map((discount) => {
-                    const discountText =
-                      discount.discountType === "percentage"
-                        ? discount.amount
-                          ? `${discount.amount}% ${discount.discount}`
-                          : discount.discount
-                        : discount.amount
-                          ? `£${discount.amount} ${discount.discount}`
-                          : discount.discount;
+                  <p className="text-sm text-muted-foreground">Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {winner.tags.map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                    return (
-                      <div
-                        key={discount._id}
-                        className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-                                {discountText}
-                              </span>
-                              {discount.expirationDate && (
-                                <Badge variant="outline" className="text-xs">
-                                  Expires: {new Date(discount.expirationDate).toLocaleDateString()}
-                                </Badge>
+              {winner.dietaryOptions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Dietary Options</p>
+                  <div className="flex flex-wrap gap-2">
+                    {winner.dietaryOptions.map((option) => (
+                      <Badge key={option} variant="secondary">
+                        {option}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Loyalty Card Perks */}
+              {loyaltyCard && (
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <p className="text-sm font-medium text-foreground">Loyalty Card Perks</p>
+                  </div>
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+                    <p className="text-sm text-foreground">{loyaltyCard.perks}</p>
+                    {loyaltyCard.savings && (
+                      <div className="flex items-center gap-2 text-primary">
+                        <TrendingDown className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          Save up to £{loyaltyCard.savings.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {loyaltyCard.notes && (
+                      <p className="text-xs text-muted-foreground">{loyaltyCard.notes}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Discounts */}
+              {discounts && discounts.length > 0 && (
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-5 w-5 text-green-600" />
+                    <p className="text-sm font-medium text-foreground">Active Discounts</p>
+                  </div>
+                  <div className="space-y-2">
+                    {discounts.map((discount) => {
+                      const discountText =
+                        discount.discountType === "percentage"
+                          ? discount.amount
+                            ? `${discount.amount}% ${discount.discount}`
+                            : discount.discount
+                          : discount.amount
+                            ? `£${discount.amount} ${discount.discount}`
+                            : discount.discount;
+
+                      return (
+                        <div
+                          key={discount._id}
+                          className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                                  {discountText}
+                                </span>
+                                {discount.expirationDate && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Expires: {new Date(discount.expirationDate).toLocaleDateString()}
+                                  </Badge>
+                                )}
+                              </div>
+                              {discount.notes && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {discount.notes}
+                                </p>
                               )}
                             </div>
-                            {discount.notes && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {discount.notes}
-                              </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Vote Breakdown */}
+          {session.finalists.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Vote Breakdown</CardTitle>
+                <CardDescription>How the team voted</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {session.finalists.map((finalistId) => {
+                    const restaurant = team.restaurants.find(
+                      (r) => r.id === finalistId
+                    );
+                    if (!restaurant) return null;
+
+                    const voteCount = getVoteCount(finalistId);
+                    const percentage =
+                      totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
+                    const isWinner = finalistId === winner.id;
+
+                    return (
+                      <div key={finalistId} className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{restaurant.name}</span>
+                            {isWinner && (
+                              <Trophy className="h-4 w-4 text-primary" />
                             )}
                           </div>
+                          <span className="text-sm text-muted-foreground">
+                            {voteCount} {voteCount === 1 ? "vote" : "votes"}
+                          </span>
+                        </div>
+                        <div className="h-3 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 ${isWinner ? "bg-primary" : "bg-muted-foreground/50"
+                              }`}
+                            style={{ width: `${percentage}%` }}
+                          />
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Vote Breakdown */}
-        {session.finalists.length > 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Vote Breakdown</CardTitle>
-              <CardDescription>How the team voted</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {session.finalists.map((finalistId) => {
-                  const restaurant = team.restaurants.find(
-                    (r) => r.id === finalistId
-                  );
-                  if (!restaurant) return null;
-
-                  const voteCount = getVoteCount(finalistId);
-                  const percentage =
-                    totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0;
-                  const isWinner = finalistId === winner.id;
-
-                  return (
-                    <div key={finalistId} className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{restaurant.name}</span>
-                          {isWinner && (
-                            <Trophy className="h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {voteCount} {voteCount === 1 ? "vote" : "votes"}
-                        </span>
-                      </div>
-                      <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-500 ${isWinner ? "bg-primary" : "bg-muted-foreground/50"
-                            }`}
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Action Buttons */}
-        <div className="text-center pt-4 space-y-3">
-          <Button
+          {/* Action Buttons */}
+          <div className="text-center pt-4 space-y-3">
+            <Button
             onClick={handleNewDay}
             size="lg"
             className="w-full max-w-md"
             disabled={isSameDay}
           >
-            {isSameDay ? "Available Tomorrow" : "Start Tomorrow's Duel"}
-          </Button>
-          <div className="flex gap-2 justify-center">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/team/${teamCode}/restaurants`)}
-            >
-              View Restaurants
+              {isSameDay ? "Available Tomorrow" : "Start Tomorrow's Duel"}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/team/${teamCode}/history`)}
-            >
-              View History
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/team/${teamCode}/restaurants`)}
+              >
+                View Restaurants
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/team/${teamCode}/history`)}
+              >
+                View History
+              </Button>
+            </div>
           </div>
         </div>
       </div>

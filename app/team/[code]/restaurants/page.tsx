@@ -28,6 +28,7 @@ import {
     User,
     Tag,
 } from "lucide-react";
+import { TeamNav } from "@/components/team-nav";
 import {
     Dialog,
     DialogContent,
@@ -399,703 +400,706 @@ export default function RestaurantsPage() {
     if (!team) return null;
 
     return (
-        <div className="min-h-screen bg-background p-4 py-8">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold font-serif">Restaurants</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Curated food list - manage restaurants and loyalty cards
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => router.push(`/team/${teamCode}/history`)}
-                        >
-                            View History
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={async () => {
-                                if (!team?._id) return;
-                                try {
-                                    const result = await seedRestaurantData({ teamId: team._id });
-                                    alert(
-                                        `Seed complete!\n` +
-                                        `- Images updated: ${result.imagesUpdated}\n` +
-                                        `- Discounts created: ${result.discountsCreated}\n` +
-                                        `- Loyalty cards created: ${result.loyaltyCardsCreated}\n` +
-                                        `- Pitches created: ${result.pitchesCreated}`
-                                    );
-                                } catch (err) {
-                                    console.error("Failed to seed data:", err);
-                                    alert("Failed to seed data. Check console for details.");
-                                }
-                            }}
-                        >
-                            Seed Sample Data
-                        </Button>
-                        <Button onClick={() => handleOpenRestaurantDialog()}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Restaurant
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {team.restaurants.map((restaurant) => {
-                        const loyaltyCard = loyaltyCardMap.get(restaurant.id);
-                        const visitCount = visitCounts?.[restaurant.id] || 0;
-                        const pitches = pitchesByRestaurant.get(restaurant.id) || [];
-                        const userPitch = userId ? pitches.find((p) => p.userId === userId) : undefined;
-                        const discounts = discountsByRestaurant.get(restaurant.id) || [];
-
-                        return (
-                            <Card key={restaurant.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                                {/* Restaurant Image */}
-                                <div className="relative w-full h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10">
-                                    <img
-                                        src={restaurant.imageUrl || getRestaurantImage(restaurant.name, restaurant.tags)}
-                                        alt={restaurant.name}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            // Fallback to placeholder if image fails to load
-                                            const target = e.target as HTMLImageElement;
-                                            target.src = `https://source.unsplash.com/400x300/?${encodeURIComponent(restaurant.name + " restaurant")}`;
-                                        }}
-                                    />
-                                    {discounts.length > 0 && (
-                                        <div className="absolute top-2 right-2">
-                                            <Badge className="bg-green-600 hover:bg-green-700 text-white">
-                                                <Tag className="h-3 w-3 mr-1" />
-                                                {discounts.length} Deal{discounts.length > 1 ? "s" : ""}
-                                            </Badge>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <CardContent className="pt-4 pb-4">
-                                    <div className="space-y-3">
-                                        {/* Header */}
-                                        <div>
-                                            <div className="flex items-start justify-between mb-1">
-                                                <div className="flex-1">
-                                                    <h3 className="text-lg font-semibold leading-tight">{restaurant.name}</h3>
-                                                    {restaurant.address && (
-                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                                            <MapPin className="h-3 w-3" />
-                                                            <span className="line-clamp-1">{restaurant.address}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {restaurant.link && (
-                                                    <a
-                                                        href={restaurant.link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-muted-foreground hover:text-foreground ml-2"
-                                                    >
-                                                        <ExternalLink className="h-4 w-4" />
-                                                    </a>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {"$".repeat(restaurant.priceLevel)}
-                                                </Badge>
-                                                <Badge variant="outline" className="text-xs">{restaurant.walkTime} min</Badge>
-                                                {visitCount > 0 && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {visitCount}x
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Tags */}
-                                        {restaurant.tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-1">
-                                                {restaurant.tags.slice(0, 3).map((tag) => (
-                                                    <Badge key={tag} variant="outline" className="text-xs">
-                                                        {tag}
-                                                    </Badge>
-                                                ))}
-                                                {restaurant.tags.length > 3 && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        +{restaurant.tags.length - 3}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* B2B Discounts Section */}
-                                        {discounts.length > 0 && (
-                                            <div className="space-y-1.5 pt-2 border-t">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Tag className="h-3.5 w-3.5 text-green-600" />
-                                                    <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                                                        B2B Deals ({discounts.length})
-                                                    </span>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    {discounts.slice(0, 2).map((discount) => {
-                                                        const discountText =
-                                                            discount.discountType === "percentage"
-                                                                ? discount.amount
-                                                                    ? `${discount.amount}% ${discount.discount}`
-                                                                    : discount.discount
-                                                                : discount.amount
-                                                                    ? `£${discount.amount} ${discount.discount}`
-                                                                    : discount.discount;
-                                                        return (
-                                                            <div
-                                                                key={discount._id}
-                                                                className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded px-2 py-1"
-                                                            >
-                                                                <p className="text-xs font-medium text-green-700 dark:text-green-400">
-                                                                    {discountText}
-                                                                </p>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                    {discounts.length > 2 && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            +{discounts.length - 2} more deal{discounts.length - 2 > 1 ? "s" : ""}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Personal Loyalty Card */}
-                                        {loyaltyCard && (
-                                            <div className="pt-2 border-t">
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <CreditCard className="h-3.5 w-3.5 text-primary" />
-                                                    <span className="text-xs font-medium">Personal Card</span>
-                                                </div>
-                                                <div className="bg-primary/5 border border-primary/20 rounded px-2 py-1">
-                                                    <p className="text-xs text-foreground">{loyaltyCard.perks}</p>
-                                                    {loyaltyCard.savings && (
-                                                        <p className="text-xs text-primary mt-0.5">
-                                                            Save £{loyaltyCard.savings.toFixed(2)}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Pitches Preview */}
-                                        {pitches.length > 0 && (
-                                            <div className="pt-2 border-t">
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <Utensils className="h-3.5 w-3.5 text-primary" />
-                                                    <span className="text-xs font-medium">
-                                                        {pitches.length} Pitch{pitches.length > 1 ? "es" : ""}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                                    {pitches.map((p) => p.pitch).join(", ")}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Action Buttons */}
-                                        <div className="pt-2 border-t space-y-2">
-                                            {userId && (
-                                                <Button
-                                                    variant={userPitch ? "outline" : "default"}
-                                                    size="sm"
-                                                    className="w-full"
-                                                    onClick={() => handleOpenPitchDialog(restaurant.id)}
-                                                >
-                                                    <Utensils className="h-4 w-4 mr-2" />
-                                                    {userPitch ? "Edit My Pitch" : "Add My Pitch"}
-                                                </Button>
-                                            )}
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleOpenCardDialog(restaurant.id, loyaltyCard)}
-                                                    className="text-xs"
-                                                >
-                                                    {loyaltyCard ? (
-                                                        <>
-                                                            <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                                                            Card
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Plus className="h-3.5 w-3.5 mr-1.5" />
-                                                            Card
-                                                        </>
-                                                    )}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleOpenDiscountDialog(restaurant.id)}
-                                                    className="text-xs bg-green-50 hover:bg-green-100 dark:bg-green-950/20 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800"
-                                                >
-                                                    {discounts.length > 0 ? (
-                                                        <>
-                                                            <Tag className="h-3.5 w-3.5 mr-1.5" />
-                                                            Deal
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Plus className="h-3.5 w-3.5 mr-1.5" />
-                                                            Deal
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="flex-1 text-xs"
-                                                    onClick={() => handleOpenRestaurantDialog(restaurant)}
-                                                >
-                                                    <Edit className="h-3.5 w-3.5 mr-1.5" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="flex-1 text-xs"
-                                                    onClick={() => handleDeleteRestaurant(restaurant.id)}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </div>
-
-                {team.restaurants.length === 0 && (
-                    <Card>
-                        <CardContent className="pt-6 text-center py-12">
-                            <p className="text-muted-foreground mb-4">No restaurants yet.</p>
+        <div className="min-h-screen bg-background">
+            <TeamNav teamCode={teamCode} userId={userId} />
+            <div className="p-4 py-8">
+                <div className="max-w-4xl mx-auto space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold font-serif">Restaurants</h1>
+                            <p className="text-muted-foreground mt-1">
+                                Curated food list - manage restaurants and loyalty cards
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => router.push(`/team/${teamCode}/history`)}
+                            >
+                                View History
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    if (!team?._id) return;
+                                    try {
+                                        const result = await seedRestaurantData({ teamId: team._id });
+                                        alert(
+                                            `Seed complete!\n` +
+                                            `- Images updated: ${result.imagesUpdated}\n` +
+                                            `- Discounts created: ${result.discountsCreated}\n` +
+                                            `- Loyalty cards created: ${result.loyaltyCardsCreated}\n` +
+                                            `- Pitches created: ${result.pitchesCreated}`
+                                        );
+                                    } catch (err) {
+                                        console.error("Failed to seed data:", err);
+                                        alert("Failed to seed data. Check console for details.");
+                                    }
+                                }}
+                            >
+                                Seed Sample Data
+                            </Button>
                             <Button onClick={() => handleOpenRestaurantDialog()}>
                                 <Plus className="h-4 w-4 mr-2" />
-                                Add Your First Restaurant
+                                Add Restaurant
                             </Button>
-                        </CardContent>
-                    </Card>
-                )}
+                        </div>
+                    </div>
 
-                {/* Restaurant Dialog */}
-                <Dialog open={showRestaurantDialog} onOpenChange={setShowRestaurantDialog}>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingRestaurant ? "Edit" : "Add"} Restaurant
-                            </DialogTitle>
-                            <DialogDescription>
-                                {editingRestaurant
-                                    ? "Update restaurant details"
-                                    : "Add a new restaurant to your curated food list"}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="restaurant-name">Restaurant Name *</Label>
-                                <Input
-                                    id="restaurant-name"
-                                    placeholder="e.g., Joe's Pizza"
-                                    value={restaurantName}
-                                    onChange={(e) => setRestaurantName(e.target.value)}
-                                />
-                            </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {team.restaurants.map((restaurant) => {
+                            const loyaltyCard = loyaltyCardMap.get(restaurant.id);
+                            const visitCount = visitCounts?.[restaurant.id] || 0;
+                            const pitches = pitchesByRestaurant.get(restaurant.id) || [];
+                            const userPitch = userId ? pitches.find((p) => p.userId === userId) : undefined;
+                            const discounts = discountsByRestaurant.get(restaurant.id) || [];
 
-                            <div className="space-y-2">
-                                <Label htmlFor="restaurant-link">Link (optional)</Label>
-                                <Input
-                                    id="restaurant-link"
-                                    type="url"
-                                    placeholder="https://maps.google.com/..."
-                                    value={restaurantLink}
-                                    onChange={(e) => setRestaurantLink(e.target.value)}
-                                />
-                            </div>
+                            return (
+                                <Card key={restaurant.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                                    {/* Restaurant Image */}
+                                    <div className="relative w-full h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10">
+                                        <img
+                                            src={restaurant.imageUrl || getRestaurantImage(restaurant.name, restaurant.tags)}
+                                            alt={restaurant.name}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                // Fallback to placeholder if image fails to load
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = `https://source.unsplash.com/400x300/?${encodeURIComponent(restaurant.name + " restaurant")}`;
+                                            }}
+                                        />
+                                        {discounts.length > 0 && (
+                                            <div className="absolute top-2 right-2">
+                                                <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                                                    <Tag className="h-3 w-3 mr-1" />
+                                                    {discounts.length} Deal{discounts.length > 1 ? "s" : ""}
+                                                </Badge>
+                                            </div>
+                                        )}
+                                    </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="restaurant-address">Address (optional)</Label>
-                                <Input
-                                    id="restaurant-address"
-                                    placeholder="123 Main St, City"
-                                    value={restaurantAddress}
-                                    onChange={(e) => setRestaurantAddress(e.target.value)}
-                                />
-                            </div>
+                                    <CardContent className="pt-4 pb-4">
+                                        <div className="space-y-3">
+                                            {/* Header */}
+                                            <div>
+                                                <div className="flex items-start justify-between mb-1">
+                                                    <div className="flex-1">
+                                                        <h3 className="text-lg font-semibold leading-tight">{restaurant.name}</h3>
+                                                        {restaurant.address && (
+                                                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                                                <MapPin className="h-3 w-3" />
+                                                                <span className="line-clamp-1">{restaurant.address}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {restaurant.link && (
+                                                        <a
+                                                            href={restaurant.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-muted-foreground hover:text-foreground ml-2"
+                                                        >
+                                                            <ExternalLink className="h-4 w-4" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        {"$".repeat(restaurant.priceLevel)}
+                                                    </Badge>
+                                                    <Badge variant="outline" className="text-xs">{restaurant.walkTime} min</Badge>
+                                                    {visitCount > 0 && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {visitCount}x
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                                            {/* Tags */}
+                                            {restaurant.tags.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {restaurant.tags.slice(0, 3).map((tag) => (
+                                                        <Badge key={tag} variant="outline" className="text-xs">
+                                                            {tag}
+                                                        </Badge>
+                                                    ))}
+                                                    {restaurant.tags.length > 3 && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            +{restaurant.tags.length - 3}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* B2B Discounts Section */}
+                                            {discounts.length > 0 && (
+                                                <div className="space-y-1.5 pt-2 border-t">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Tag className="h-3.5 w-3.5 text-green-600" />
+                                                        <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                                                            B2B Deals ({discounts.length})
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {discounts.slice(0, 2).map((discount) => {
+                                                            const discountText =
+                                                                discount.discountType === "percentage"
+                                                                    ? discount.amount
+                                                                        ? `${discount.amount}% ${discount.discount}`
+                                                                        : discount.discount
+                                                                    : discount.amount
+                                                                        ? `£${discount.amount} ${discount.discount}`
+                                                                        : discount.discount;
+                                                            return (
+                                                                <div
+                                                                    key={discount._id}
+                                                                    className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded px-2 py-1"
+                                                                >
+                                                                    <p className="text-xs font-medium text-green-700 dark:text-green-400">
+                                                                        {discountText}
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {discounts.length > 2 && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                +{discounts.length - 2} more deal{discounts.length - 2 > 1 ? "s" : ""}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Personal Loyalty Card */}
+                                            {loyaltyCard && (
+                                                <div className="pt-2 border-t">
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <CreditCard className="h-3.5 w-3.5 text-primary" />
+                                                        <span className="text-xs font-medium">Personal Card</span>
+                                                    </div>
+                                                    <div className="bg-primary/5 border border-primary/20 rounded px-2 py-1">
+                                                        <p className="text-xs text-foreground">{loyaltyCard.perks}</p>
+                                                        {loyaltyCard.savings && (
+                                                            <p className="text-xs text-primary mt-0.5">
+                                                                Save £{loyaltyCard.savings.toFixed(2)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Pitches Preview */}
+                                            {pitches.length > 0 && (
+                                                <div className="pt-2 border-t">
+                                                    <div className="flex items-center gap-1.5 mb-1">
+                                                        <Utensils className="h-3.5 w-3.5 text-primary" />
+                                                        <span className="text-xs font-medium">
+                                                            {pitches.length} Pitch{pitches.length > 1 ? "es" : ""}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                                        {pitches.map((p) => p.pitch).join(", ")}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Action Buttons */}
+                                            <div className="pt-2 border-t space-y-2">
+                                                {userId && (
+                                                    <Button
+                                                        variant={userPitch ? "outline" : "default"}
+                                                        size="sm"
+                                                        className="w-full"
+                                                        onClick={() => handleOpenPitchDialog(restaurant.id)}
+                                                    >
+                                                        <Utensils className="h-4 w-4 mr-2" />
+                                                        {userPitch ? "Edit My Pitch" : "Add My Pitch"}
+                                                    </Button>
+                                                )}
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleOpenCardDialog(restaurant.id, loyaltyCard)}
+                                                        className="text-xs"
+                                                    >
+                                                        {loyaltyCard ? (
+                                                            <>
+                                                                <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                                                                Card
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                                                Card
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleOpenDiscountDialog(restaurant.id)}
+                                                        className="text-xs bg-green-50 hover:bg-green-100 dark:bg-green-950/20 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800"
+                                                    >
+                                                        {discounts.length > 0 ? (
+                                                            <>
+                                                                <Tag className="h-3.5 w-3.5 mr-1.5" />
+                                                                Deal
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                                                Deal
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex-1 text-xs"
+                                                        onClick={() => handleOpenRestaurantDialog(restaurant)}
+                                                    >
+                                                        <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="flex-1 text-xs"
+                                                        onClick={() => handleDeleteRestaurant(restaurant.id)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+
+                    {team.restaurants.length === 0 && (
+                        <Card>
+                            <CardContent className="pt-6 text-center py-12">
+                                <p className="text-muted-foreground mb-4">No restaurants yet.</p>
+                                <Button onClick={() => handleOpenRestaurantDialog()}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Your First Restaurant
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Restaurant Dialog */}
+                    <Dialog open={showRestaurantDialog} onOpenChange={setShowRestaurantDialog}>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {editingRestaurant ? "Edit" : "Add"} Restaurant
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {editingRestaurant
+                                        ? "Update restaurant details"
+                                        : "Add a new restaurant to your curated food list"}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="walk-time">Walk Time (minutes)</Label>
+                                    <Label htmlFor="restaurant-name">Restaurant Name *</Label>
                                     <Input
-                                        id="walk-time"
+                                        id="restaurant-name"
+                                        placeholder="e.g., Joe's Pizza"
+                                        value={restaurantName}
+                                        onChange={(e) => setRestaurantName(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="restaurant-link">Link (optional)</Label>
+                                    <Input
+                                        id="restaurant-link"
+                                        type="url"
+                                        placeholder="https://maps.google.com/..."
+                                        value={restaurantLink}
+                                        onChange={(e) => setRestaurantLink(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="restaurant-address">Address (optional)</Label>
+                                    <Input
+                                        id="restaurant-address"
+                                        placeholder="123 Main St, City"
+                                        value={restaurantAddress}
+                                        onChange={(e) => setRestaurantAddress(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="walk-time">Walk Time (minutes)</Label>
+                                        <Input
+                                            id="walk-time"
+                                            type="number"
+                                            value={walkTime}
+                                            onChange={(e) => setWalkTime(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="price">Price Level</Label>
+                                        <div className="flex gap-2">
+                                            {[1, 2, 3].map((level) => (
+                                                <Button
+                                                    key={level}
+                                                    type="button"
+                                                    variant={priceLevel === level ? "default" : "outline"}
+                                                    size="sm"
+                                                    onClick={() => setPriceLevel(level)}
+                                                >
+                                                    {"$".repeat(level)}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="tags">Tags (comma-separated)</Label>
+                                    <Input
+                                        id="tags"
+                                        placeholder="italian, pizza, casual"
+                                        value={tags}
+                                        onChange={(e) => setTags(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="dietary">
+                                        Dietary Options (comma-separated)
+                                    </Label>
+                                    <Input
+                                        id="dietary"
+                                        placeholder="vegetarian, vegan, gluten-free"
+                                        value={dietaryOptions}
+                                        onChange={(e) => setDietaryOptions(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={handleSaveRestaurant}
+                                        className="flex-1"
+                                        disabled={!restaurantName.trim()}
+                                    >
+                                        {editingRestaurant ? "Update" : "Add"} Restaurant
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowRestaurantDialog(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Pitch Dialog */}
+                    <Dialog open={showPitchDialog} onOpenChange={setShowPitchDialog}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Your Pitch</DialogTitle>
+                                <DialogDescription>
+                                    {pitchRestaurantId &&
+                                        `What would you pitch from ${team.restaurants.find((r) => r.id === pitchRestaurantId)?.name
+                                        }?`}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="pitch">Menu Item / Dish *</Label>
+                                    <Input
+                                        id="pitch"
+                                        placeholder="e.g., Their famous Margherita pizza, The spicy ramen bowl"
+                                        value={pitchText}
+                                        onChange={(e) => setPitchText(e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        What item or dish would you recommend from this restaurant?
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={handleSavePitch}
+                                        className="flex-1"
+                                        disabled={!pitchText.trim()}
+                                    >
+                                        {teamPitches?.find(
+                                            (p) => p.restaurantId === pitchRestaurantId && p.userId === userId
+                                        )
+                                            ? "Update"
+                                            : "Save"}{" "}
+                                        Pitch
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowPitchDialog(false);
+                                            setPitchRestaurantId(null);
+                                            setPitchText("");
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                                {teamPitches?.find(
+                                    (p) => p.restaurantId === pitchRestaurantId && p.userId === userId
+                                ) && (
+                                        <Button
+                                            variant="destructive"
+                                            onClick={() => {
+                                                const userPitch = teamPitches.find(
+                                                    (p) => p.restaurantId === pitchRestaurantId && p.userId === userId
+                                                );
+                                                if (userPitch) {
+                                                    handleDeletePitch(userPitch._id);
+                                                }
+                                            }}
+                                            className="w-full"
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete Pitch
+                                        </Button>
+                                    )}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Loyalty Card Dialog */}
+                    <Dialog
+                        open={showCardDialog}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setShowCardDialog(false);
+                                setEditingCard(null);
+                                setPerks("");
+                                setSavings("");
+                                setNotes("");
+                                setSelectedRestaurantId(null);
+                            }
+                        }}
+                    >
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {editingCard ? "Edit" : "Add"} Personal Loyalty Card
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {selectedRestaurantId &&
+                                        `Add your personal loyalty card perks for ${team.restaurants.find((r) => r.id === selectedRestaurantId)?.name
+                                        }. This helps you decide which restaurant to pick.`}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="perks">Card Perks *</Label>
+                                    <Input
+                                        id="perks"
+                                        placeholder="e.g., 20% off, Buy 1 get 1 free, Free delivery"
+                                        value={perks}
+                                        onChange={(e) => setPerks(e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Personal loyalty card perks that help you decide
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="savings">Estimated Savings (£)</Label>
+                                    <Input
+                                        id="savings"
                                         type="number"
-                                        value={walkTime}
-                                        onChange={(e) => setWalkTime(e.target.value)}
+                                        step="0.01"
+                                        placeholder="e.g., 5.00"
+                                        value={savings}
+                                        onChange={(e) => setSavings(e.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="price">Price Level</Label>
-                                    <div className="flex gap-2">
-                                        {[1, 2, 3].map((level) => (
-                                            <Button
-                                                key={level}
-                                                type="button"
-                                                variant={priceLevel === level ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => setPriceLevel(level)}
-                                            >
-                                                {"$".repeat(level)}
-                                            </Button>
-                                        ))}
-                                    </div>
+                                    <Label htmlFor="notes">Notes (optional)</Label>
+                                    <Input
+                                        id="notes"
+                                        placeholder="Additional notes about the card"
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                    />
                                 </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="tags">Tags (comma-separated)</Label>
-                                <Input
-                                    id="tags"
-                                    placeholder="italian, pizza, casual"
-                                    value={tags}
-                                    onChange={(e) => setTags(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="dietary">
-                                    Dietary Options (comma-separated)
-                                </Label>
-                                <Input
-                                    id="dietary"
-                                    placeholder="vegetarian, vegan, gluten-free"
-                                    value={dietaryOptions}
-                                    onChange={(e) => setDietaryOptions(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={handleSaveRestaurant}
-                                    className="flex-1"
-                                    disabled={!restaurantName.trim()}
-                                >
-                                    {editingRestaurant ? "Update" : "Add"} Restaurant
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setShowRestaurantDialog(false)}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Pitch Dialog */}
-                <Dialog open={showPitchDialog} onOpenChange={setShowPitchDialog}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Your Pitch</DialogTitle>
-                            <DialogDescription>
-                                {pitchRestaurantId &&
-                                    `What would you pitch from ${team.restaurants.find((r) => r.id === pitchRestaurantId)?.name
-                                    }?`}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="pitch">Menu Item / Dish *</Label>
-                                <Input
-                                    id="pitch"
-                                    placeholder="e.g., Their famous Margherita pizza, The spicy ramen bowl"
-                                    value={pitchText}
-                                    onChange={(e) => setPitchText(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    What item or dish would you recommend from this restaurant?
-                                </p>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={handleSavePitch}
-                                    className="flex-1"
-                                    disabled={!pitchText.trim()}
-                                >
-                                    {teamPitches?.find(
-                                        (p) => p.restaurantId === pitchRestaurantId && p.userId === userId
-                                    )
-                                        ? "Update"
-                                        : "Save"}{" "}
-                                    Pitch
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowPitchDialog(false);
-                                        setPitchRestaurantId(null);
-                                        setPitchText("");
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                            {teamPitches?.find(
-                                (p) => p.restaurantId === pitchRestaurantId && p.userId === userId
-                            ) && (
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={handleSaveCard}
+                                        className="flex-1"
+                                        disabled={!perks.trim()}
+                                    >
+                                        Save
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowCardDialog(false);
+                                            setEditingCard(null);
+                                            setPerks("");
+                                            setSavings("");
+                                            setNotes("");
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                                {editingCard && (
                                     <Button
                                         variant="destructive"
                                         onClick={() => {
-                                            const userPitch = teamPitches.find(
-                                                (p) => p.restaurantId === pitchRestaurantId && p.userId === userId
-                                            );
-                                            if (userPitch) {
-                                                handleDeletePitch(userPitch._id);
-                                            }
+                                            handleDeleteCard(editingCard as Id<"loyaltyCards">);
+                                            setShowCardDialog(false);
                                         }}
                                         className="w-full"
                                     >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete Pitch
+                                        Delete Card
                                     </Button>
                                 )}
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
 
-                {/* Loyalty Card Dialog */}
-                <Dialog
-                    open={showCardDialog}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setShowCardDialog(false);
-                            setEditingCard(null);
-                            setPerks("");
-                            setSavings("");
-                            setNotes("");
-                            setSelectedRestaurantId(null);
-                        }
-                    }}
-                >
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingCard ? "Edit" : "Add"} Personal Loyalty Card
-                            </DialogTitle>
-                            <DialogDescription>
-                                {selectedRestaurantId &&
-                                    `Add your personal loyalty card perks for ${team.restaurants.find((r) => r.id === selectedRestaurantId)?.name
-                                    }. This helps you decide which restaurant to pick.`}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="perks">Card Perks *</Label>
-                                <Input
-                                    id="perks"
-                                    placeholder="e.g., 20% off, Buy 1 get 1 free, Free delivery"
-                                    value={perks}
-                                    onChange={(e) => setPerks(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Personal loyalty card perks that help you decide
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="savings">Estimated Savings (£)</Label>
-                                <Input
-                                    id="savings"
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="e.g., 5.00"
-                                    value={savings}
-                                    onChange={(e) => setSavings(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="notes">Notes (optional)</Label>
-                                <Input
-                                    id="notes"
-                                    placeholder="Additional notes about the card"
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={handleSaveCard}
-                                    className="flex-1"
-                                    disabled={!perks.trim()}
-                                >
-                                    Save
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowCardDialog(false);
-                                        setEditingCard(null);
-                                        setPerks("");
-                                        setSavings("");
-                                        setNotes("");
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                            {editingCard && (
-                                <Button
-                                    variant="destructive"
-                                    onClick={() => {
-                                        handleDeleteCard(editingCard as Id<"loyaltyCards">);
-                                        setShowCardDialog(false);
-                                    }}
-                                    className="w-full"
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Card
-                                </Button>
-                            )}
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Discount Dialog */}
-                <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingDiscount ? "Edit" : "Add"} B2B Deal / Discount
-                            </DialogTitle>
-                            <DialogDescription>
-                                {discountRestaurantId &&
-                                    `Add a negotiated B2B deal or bulk order discount for ${team.restaurants.find((r) => r.id === discountRestaurantId)?.name
-                                    }. These are team-level deals (e.g., bulk orders, corporate discounts).`}
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="discount-description">Deal Description *</Label>
-                                <Input
-                                    id="discount-description"
-                                    placeholder="e.g., 15% off bulk orders, Corporate discount, Minimum 10 orders"
-                                    value={discountDescription}
-                                    onChange={(e) => setDiscountDescription(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    B2B negotiated deals or bulk order discounts for the team
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                    {/* Discount Dialog */}
+                    <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {editingDiscount ? "Edit" : "Add"} B2B Deal / Discount
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {discountRestaurantId &&
+                                        `Add a negotiated B2B deal or bulk order discount for ${team.restaurants.find((r) => r.id === discountRestaurantId)?.name
+                                        }. These are team-level deals (e.g., bulk orders, corporate discounts).`}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="discount-type">Discount Type</Label>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            type="button"
-                                            variant={discountType === "percentage" ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={() => setDiscountType("percentage")}
-                                        >
-                                            %
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant={discountType === "fixed" ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={() => setDiscountType("fixed")}
-                                        >
-                                            £
-                                        </Button>
+                                    <Label htmlFor="discount-description">Deal Description *</Label>
+                                    <Input
+                                        id="discount-description"
+                                        placeholder="e.g., 15% off bulk orders, Corporate discount, Minimum 10 orders"
+                                        value={discountDescription}
+                                        onChange={(e) => setDiscountDescription(e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        B2B negotiated deals or bulk order discounts for the team
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="discount-type">Discount Type</Label>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant={discountType === "percentage" ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setDiscountType("percentage")}
+                                            >
+                                                %
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant={discountType === "fixed" ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setDiscountType("fixed")}
+                                            >
+                                                £
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="discount-amount">
+                                            Amount {discountType === "percentage" ? "(%)" : "(£)"}
+                                        </Label>
+                                        <Input
+                                            id="discount-amount"
+                                            type="number"
+                                            step={discountType === "percentage" ? "1" : "0.01"}
+                                            placeholder={discountType === "percentage" ? "15" : "5.00"}
+                                            value={discountAmount}
+                                            onChange={(e) => setDiscountAmount(e.target.value)}
+                                        />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="discount-amount">
-                                        Amount {discountType === "percentage" ? "(%)" : "(£)"}
-                                    </Label>
+                                    <Label htmlFor="discount-expiration">Expiration Date (optional)</Label>
                                     <Input
-                                        id="discount-amount"
-                                        type="number"
-                                        step={discountType === "percentage" ? "1" : "0.01"}
-                                        placeholder={discountType === "percentage" ? "15" : "5.00"}
-                                        value={discountAmount}
-                                        onChange={(e) => setDiscountAmount(e.target.value)}
+                                        id="discount-expiration"
+                                        type="date"
+                                        value={discountExpiration}
+                                        onChange={(e) => setDiscountExpiration(e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Leave empty if discount doesn't expire
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="discount-notes">Deal Notes (optional)</Label>
+                                    <Input
+                                        id="discount-notes"
+                                        placeholder="e.g., Contact manager for bulk orders, Mention 'Lunch Duel Team'"
+                                        value={discountNotes}
+                                        onChange={(e) => setDiscountNotes(e.target.value)}
                                     />
                                 </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={handleSaveDiscount}
+                                        className="flex-1"
+                                        disabled={!discountDescription.trim()}
+                                    >
+                                        {editingDiscount ? "Update" : "Save"} Discount
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowDiscountDialog(false);
+                                            setEditingDiscount(null);
+                                            setDiscountRestaurantId(null);
+                                            setDiscountDescription("");
+                                            setDiscountAmount("");
+                                            setDiscountType("percentage");
+                                            setDiscountExpiration("");
+                                            setDiscountNotes("");
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                                {editingDiscount && (
+                                    <Button
+                                        variant="destructive"
+                                        onClick={() => {
+                                            handleDeleteDiscount(editingDiscount as Id<"discounts">);
+                                            setShowDiscountDialog(false);
+                                        }}
+                                        className="w-full"
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Discount
+                                    </Button>
+                                )}
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="discount-expiration">Expiration Date (optional)</Label>
-                                <Input
-                                    id="discount-expiration"
-                                    type="date"
-                                    value={discountExpiration}
-                                    onChange={(e) => setDiscountExpiration(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Leave empty if discount doesn't expire
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="discount-notes">Deal Notes (optional)</Label>
-                                <Input
-                                    id="discount-notes"
-                                    placeholder="e.g., Contact manager for bulk orders, Mention 'Lunch Duel Team'"
-                                    value={discountNotes}
-                                    onChange={(e) => setDiscountNotes(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={handleSaveDiscount}
-                                    className="flex-1"
-                                    disabled={!discountDescription.trim()}
-                                >
-                                    {editingDiscount ? "Update" : "Save"} Discount
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setShowDiscountDialog(false);
-                                        setEditingDiscount(null);
-                                        setDiscountRestaurantId(null);
-                                        setDiscountDescription("");
-                                        setDiscountAmount("");
-                                        setDiscountType("percentage");
-                                        setDiscountExpiration("");
-                                        setDiscountNotes("");
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                            {editingDiscount && (
-                                <Button
-                                    variant="destructive"
-                                    onClick={() => {
-                                        handleDeleteDiscount(editingDiscount as Id<"discounts">);
-                                        setShowDiscountDialog(false);
-                                    }}
-                                    className="w-full"
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Discount
-                                </Button>
-                            )}
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </div>
     );

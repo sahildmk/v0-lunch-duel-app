@@ -14,6 +14,7 @@ import {
 import { Copy, Check, Users, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { shouldRedirect } from "@/lib/session-helpers";
+import { TeamNav } from "@/components/team-nav";
 
 const CURRENT_USER_ID_KEY = "lunchDuel_currentUserId";
 
@@ -67,12 +68,18 @@ export default function VibePage() {
   const params = useParams();
   const pathname = usePathname();
   const teamCode = params?.code as string;
-  const userId = getUserId();
+  const [userId, setUserId] = useState<Id<"users"> | null>(null);
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [hasSubmittedVibes, setHasSubmittedVibes] = useState(false);
   const isInitialLoad = useRef(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUserId(getUserId());
+    }
+  }, []);
 
   const user = useQuery(api.users.getUser, userId ? { userId } : "skip");
   const team = useQuery(
@@ -284,8 +291,10 @@ export default function VibePage() {
   if (!user || !team || !session) return null;
 
   return (
-    <div className="min-h-screen bg-background p-8 relative overflow-hidden">
-      <style jsx>{`
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <TeamNav teamCode={teamCode} userId={userId} />
+      <div className="p-8">
+        <style jsx>{`
         @keyframes float {
           0%,
           100% {
@@ -297,122 +306,123 @@ export default function VibePage() {
         }
       `}</style>
 
-      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
-        {user.isAdmin === true && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+          {user.isAdmin === true && (
+            <button
+              onClick={() => router.push("/admin/session")}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
+              title="Admin Controls"
+            >
+              <Settings className="h-4 w-4 text-orange-600" />
+              <span className="text-sm font-medium text-orange-600">Admin</span>
+            </button>
+          )}
+
           <button
-            onClick={() => router.push("/admin/session")}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-full hover:bg-orange-500/20 transition-colors shadow-sm"
-            title="Admin Controls"
+            onClick={handleCopyCode}
+            className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full hover:border-primary/50 transition-colors shadow-sm"
           >
-            <Settings className="h-4 w-4 text-orange-600" />
-            <span className="text-sm font-medium text-orange-600">Admin</span>
+            <span className="text-sm font-medium text-muted-foreground">
+              Team
+            </span>
+            <span className="text-lg font-bold font-mono tracking-wider">
+              {team.code}
+            </span>
+            {copied ? (
+              <Check className="h-4 w-4 text-primary" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
           </button>
-        )}
 
-        <button
-          onClick={handleCopyCode}
-          className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-full hover:border-primary/50 transition-colors shadow-sm"
-        >
-          <span className="text-sm font-medium text-muted-foreground">
-            Team
-          </span>
-          <span className="text-lg font-bold font-mono tracking-wider">
-            {team.code}
-          </span>
-          {copied ? (
-            <Check className="h-4 w-4 text-primary" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-        </button>
-
-        <div className="px-4 py-2 bg-primary/10 border border-primary/20 rounded-full shadow-sm">
-          <span className="text-lg font-bold text-primary">
-            {timeRemaining}
-          </span>
+          <div className="px-4 py-2 bg-primary/10 border border-primary/20 rounded-full shadow-sm">
+            <span className="text-lg font-bold text-primary">
+              {timeRemaining}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <TooltipProvider delayDuration={200}>
-        <div className="relative w-full h-[calc(100vh-200px)] mt-12">
-          {VIBE_OPTIONS.map((vibe) => {
-            const usersWhoSelected = vibeSelections[vibe.id] || [];
-            const hasSelections = usersWhoSelected.length > 0;
+        <TooltipProvider delayDuration={200}>
+          <div className="relative w-full h-[calc(100vh-200px)] mt-12">
+            {VIBE_OPTIONS.map((vibe) => {
+              const usersWhoSelected = vibeSelections[vibe.id] || [];
+              const hasSelections = usersWhoSelected.length > 0;
 
-            return (
-              <Tooltip key={vibe.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => toggleVibe(vibe.id)}
-                    style={{
-                      ...vibe.position,
-                      animation: `float 4s ease-in-out infinite`,
-                      animationDelay: vibe.delay,
-                    }}
-                    className={cn(
-                      "absolute px-6 py-3 rounded-full border-2 font-medium transition-all hover:scale-110 active:scale-95",
-                      selectedVibes.includes(vibe.id)
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                        : "border-border bg-card hover:border-primary/50 hover:shadow-md"
-                    )}
-                  >
-                    {vibe.label}
-                  </button>
-                </TooltipTrigger>
-                {hasSelections && (
-                  <TooltipContent
-                    side="top"
-                    className="max-w-xs bg-popover border border-border shadow-lg"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-primary" />
-                        <span className="font-semibold text-sm">
-                          {usersWhoSelected.length}{" "}
-                          {usersWhoSelected.length === 1 ? "person" : "people"}{" "}
-                          selected
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {usersWhoSelected.map((name, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium border border-primary/20"
-                          >
-                            {name}
+              return (
+                <Tooltip key={vibe.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => toggleVibe(vibe.id)}
+                      style={{
+                        ...vibe.position,
+                        animation: `float 4s ease-in-out infinite`,
+                        animationDelay: vibe.delay,
+                      }}
+                      className={cn(
+                        "absolute px-6 py-3 rounded-full border-2 font-medium transition-all hover:scale-110 active:scale-95",
+                        selectedVibes.includes(vibe.id)
+                          ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                          : "border-border bg-card hover:border-primary/50 hover:shadow-md"
+                      )}
+                    >
+                      {vibe.label}
+                    </button>
+                  </TooltipTrigger>
+                  {hasSelections && (
+                    <TooltipContent
+                      side="top"
+                      className="max-w-xs bg-popover border border-border shadow-lg"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-primary" />
+                          <span className="font-semibold text-sm">
+                            {usersWhoSelected.length}{" "}
+                            {usersWhoSelected.length === 1 ? "person" : "people"}{" "}
+                            selected
                           </span>
-                        ))}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {usersWhoSelected.map((name, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium border border-primary/20"
+                            >
+                              {name}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            );
-          })}
-        </div>
-      </TooltipProvider>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              );
+            })}
+          </div>
+        </TooltipProvider>
 
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-        <div className="text-center">
-          {hasSubmittedVibes && selectedVibes.length > 0 ? (
-            <div className="px-6 py-3 bg-primary/10 border border-primary/20 rounded-full">
-              <p className="text-sm font-medium text-primary">
-                Vibes saved! Waiting for admin to start voting...
-              </p>
-            </div>
-          ) : selectedVibes.length > 0 ? (
-            <div className="px-6 py-3 bg-muted/50 border border-border rounded-full">
-              <p className="text-sm font-medium text-muted-foreground">
-                Select your vibes (auto-saved)
-              </p>
-            </div>
-          ) : (
-            <div className="px-6 py-3 bg-muted/50 border border-border rounded-full">
-              <p className="text-sm font-medium text-muted-foreground">
-                Select at least one vibe
-              </p>
-            </div>
-          )}
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+          <div className="text-center">
+            {hasSubmittedVibes && selectedVibes.length > 0 ? (
+              <div className="px-6 py-3 bg-primary/10 border border-primary/20 rounded-full">
+                <p className="text-sm font-medium text-primary">
+                  Vibes saved! Waiting for admin to start voting...
+                </p>
+              </div>
+            ) : selectedVibes.length > 0 ? (
+              <div className="px-6 py-3 bg-muted/50 border border-border rounded-full">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Select your vibes (auto-saved)
+                </p>
+              </div>
+            ) : (
+              <div className="px-6 py-3 bg-muted/50 border border-border rounded-full">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Select at least one vibe
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
